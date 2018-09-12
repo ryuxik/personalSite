@@ -1,0 +1,64 @@
+/* You can add global styles to this file, and also import other style files */
+:root {
+	--color-text-nav: white;
+	--color-text-lower: rgb(52, 12, 84);
+	--color-text-hover: #e9fecd;
+	--color-bg-hover: rgba(127,127,127,.7);
+}
+
+@font-face {
+	font-family: Lato;
+	src: url(./assets/Lato/Lato-Light.ttf);
+}
+
+/*general*/
+
+body {
+  height: 100vh;
+  font-size: 14px;
+  background-size:cover;
+  background-repeat: no-repeat;
+  background-image: url('./app/images/mountain.jpg');
+  margin: 0;
+  font-family: 'Lato', sans-serif;
+  color: var(--color-text);
+}
+
+hr {
+	margin: 0;
+	width: 100%;
+}
+
+.frost {
+	/*-webkit-backdrop-filter: blur(6px); */
+	/*background-color: rgba(20,20,20,0.4);*/
+}
+
+.frost-alt {
+	-webkit-backdrop-filter: blur(10px); 
+	background-color: rgba(255,255,255,0.2);
+	border-radius: 14px;
+}
+
+.row {
+	width: 100vw;
+	display: flex;
+}
+
+/*navbar*/
+
+#home-col {
+	color: var(--color-text-nav);
+	text-decoration: none;
+	display: inline-block;
+	width: 10%;
+	font-size: 1.4em;
+
+	display: flex;
+  	justify-content: center;
+  	align-items: center;
+}
+
+a.nav-col:hover, #home-col:hover {
+	background: radial-gradient(rgba(50,50,50,.5), transparent);
+}

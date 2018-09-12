@@ -1,0 +1,6 @@
+app-navbar {
+	display: flex;
+	justify-content: space-evenly;
+	height: 7.5vh;
+	width: 100vw;
+}

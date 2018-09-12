@@ -1,0 +1,36 @@
+<div id="aboutme" *ngIf="isAbout()">
+	<p class="frost-alt">	Hi I'm Santiago! I'm a senior at MIT and I love CS and puzzles. My fields of interest include ML, AI, UX, and Finance. I'm passionate about developing creative strategies to solve problems and finding new ways to challenge myself. I play soccer, chess, and poker and work on a variety of personal projects in my free time which you can check out at my github. I'm also an active member and Alumni Relations Chair of my fratenity, Phi Kappa Theta, here at MIT. I'm always looking to collaborate and get involved in fun projects so feel free to contact me through any medium at my Contact Me section. Thanks for stopping by my site! 
+	</p>
+</div>
+
+<div class="row" id="contact-container" *ngIf="isContact()">
+	<div class="frost-alt" id="c-froster">
+		<div id="email">
+			smunoz@mit.edu
+		</div>
+		<div id="phone">
+			(305) 479-3558
+		</div>
+		<div id="github">
+			<a class="link" href="https://github.com/ryuxik" target="_blank"> GitHub </a>
+		</div>
+		<div id="linkedin">
+			<a class="link" href="https://linkedin.com/in/santiago-munoz" target="_blank"> LinkedIn </a>
+		</div>
+	</div>
+</div>
+
+<div class="row" id="welcome" *ngIf="isHome()">
+	<div id="name">
+		Santiago Muñoz
+		<hr>
+	</div>
+
+	<div id="title">
+		Computer Science Student at the Massachusetts Institute of Technology
+	</div>
+</div>
+
+<div id="project-container" *ngIf="isProjects()">
+	<p class="frost-alt"> Sorry, this page is under construction. </p>
+</div>

@@ -1,0 +1,97 @@
+/*welcome*/
+
+#welcome {
+	display: flex;
+	justify-content: flex-start;
+  	align-items: center;
+  	flex-direction: column;
+  	cursor: default;
+  	color: var(--color-text-lower);
+}
+
+#name {
+	font-size: 7em;
+	padding-top: 12vh;
+}
+
+#title {
+	font-size: 1.5em;
+}
+
+/*about*/
+
+#aboutme {
+	display: flex;
+	justify-content: flex-start;
+  	align-items: center;
+  	flex-direction: column;
+  	cursor: default;
+  	color: var(--color-text-lower);
+
+}
+
+#aboutme > * {
+	text-indent: 50px;
+	margin-top: 13vh;
+	font-size: 1.5em;
+	width: 60vw;
+	line-height: 160%;
+	padding: 10px;
+}
+
+
+/*contact*/
+
+#contact-container {
+	display: flex;
+	justify-content: flex-start;
+  	align-items: center;
+  	flex-direction: column;
+  	cursor: default;
+  	color: var(--color-text-lower);
+
+}
+
+#c-froster {
+	margin-top: 13vh;
+	padding: 10px;
+	display: flex;
+	justify-content: center;
+  	align-items: center;
+  	flex-direction: column;
+}
+
+#email {
+	font-size: 3em;
+}
+
+#phone {
+	font-size: 2em;
+}
+
+#github > * {
+	color: var(--color-text-lower);
+	font-size: 2em;
+}
+
+#linkedin > * {
+	color: var(--color-text-lower);
+	font-size: 2em;
+}
+
+/*project*/
+
+#project-container {
+	display: flex;
+	justify-content: center;
+  	align-items: center;
+  	flex-direction: column;
+}
+
+#project-container > * {
+	text-indent: 50px;
+	margin-top: 13vh;
+	font-size: 1.5em;
+	line-height: 160%;
+	padding: 10px;
+}

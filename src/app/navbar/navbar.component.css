@@ -1,0 +1,17 @@
+app-navbar-button {
+	color: var(--color-text-nav);
+	text-decoration: none;
+	display: inline-block;
+	width: 30%;
+	font-size: 1.4em;
+
+	display: flex;
+  	justify-content: center;
+  	align-items: center;
+  	cursor: default;
+}
+
+app-navbar-button:hover {
+	background: radial-gradient(rgba(64, 29, 135, 0.5), transparent);
+	cursor: pointer;
+}
