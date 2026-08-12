@@ -1,0 +1,275 @@
+---
+/**
+ * InquiryForm — the 5-field enquiry form, or a mailto block when no endpoint
+ * is configured. Owned by Agent C (see SPEC.md § Sessions page, item 8).
+ *
+ * SITE.formEndpoint is empty until Ryu creates a Formspree (or CF function)
+ * endpoint, so today this renders the mailto block. Fill in `formEndpoint` in
+ * src/config.ts and the full form takes over — no other change needed.
+ *
+ * Props:
+ *   id? — DOM id for the form/mailto block (default "inquiry")
+ */
+import { SITE } from '../config';
+
+interface Props {
+  id?: string;
+}
+
+const { id = 'inquiry' } = Astro.props;
+
+const endpoint = SITE.formEndpoint.trim();
+const hasEndpoint = endpoint.length > 0;
+
+const SESSION_TYPES = [
+  'Headshots',
+  'Portrait session',
+  'Creative/editorial project',
+  'Other',
+];
+---
+
+{
+  hasEndpoint ? (
+    <form class="inquiry" id={id} method="post" action={endpoint}>
+      <div class="inquiry__grid">
+        <p class="inquiry__field">
+          <label class="inquiry__label" for={`${id}-name`}>
+            Name
+          </label>
+          <input
+            class="inquiry__input"
+            id={`${id}-name`}
+            name="name"
+            type="text"
+            autocomplete="name"
+            required
+          />
+        </p>
+
+        <p class="inquiry__field">
+          <label class="inquiry__label" for={`${id}-email`}>
+            Email
+          </label>
+          <input
+            class="inquiry__input"
+            id={`${id}-email`}
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+          />
+        </p>
+
+        <p class="inquiry__field">
+          <label class="inquiry__label" for={`${id}-type`}>
+            Session type
+          </label>
+          <select class="inquiry__input inquiry__select" id={`${id}-type`} name="session-type" required>
+            {/* Empty + disabled default so `required` actually bites: without it
+                the first option is pre-selected and every enquiry from someone
+                who ignores the dropdown arrives tagged "Headshots". */}
+            <option value="" disabled selected>Choose one</option>
+            {SESSION_TYPES.map((type) => (
+              <option value={type}>{type}</option>
+            ))}
+          </select>
+        </p>
+
+        <p class="inquiry__field">
+          <label class="inquiry__label" for={`${id}-dates`}>
+            Date window
+          </label>
+          <input
+            class="inquiry__input"
+            id={`${id}-dates`}
+            name="date-window"
+            type="text"
+            placeholder="Any week in March, weekends preferred"
+            required
+          />
+        </p>
+
+        <p class="inquiry__field inquiry__field--full">
+          <label class="inquiry__label" for={`${id}-message`}>
+            What are we making?
+          </label>
+          <textarea
+            class="inquiry__input inquiry__textarea"
+            id={`${id}-message`}
+            name="message"
+            rows="5"
+            required
+          ></textarea>
+        </p>
+      </div>
+
+      {/* Honeypot — hidden from humans and assistive tech; bots fill it in. */}
+      <div class="inquiry__hp" aria-hidden="true">
+        <label for={`${id}-company`}>Company</label>
+        <input id={`${id}-company`} name="_gotcha" type="text" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <div class="inquiry__actions">
+        <button class="button" type="submit">
+          Send enquiry
+        </button>
+        {/* TODO(ryu): confirm the reply window before launch. */}
+        <span class="inquiry__reply">I reply within 24 hours — TODO(ryu): confirm window</span>
+      </div>
+    </form>
+  ) : (
+    <div class="mailto" id={id}>
+      <p class="mailto__label label">Prefer email?</p>
+      <p class="mailto__link">
+        <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
+      </p>
+      <p class="mailto__hint">
+        Tell me the kind of session, a rough date window, and what you want the pictures for.
+      </p>
+      {/* TODO(ryu): confirm the reply window before launch. */}
+      <p class="mailto__reply inquiry__reply">I reply within 24 hours — TODO(ryu): confirm window</p>
+    </div>
+  )
+}
+
+<style>
+  /* --- form ------------------------------------------------------------- */
+
+  .inquiry {
+    margin-top: var(--space-5);
+  }
+
+  .inquiry__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5);
+  }
+
+  .inquiry__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-width: none;
+    margin: 0;
+  }
+
+  .inquiry__field--full {
+    grid-column: 1 / -1;
+  }
+
+  .inquiry__label {
+    font-family: var(--grotesque);
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--ink-soft);
+  }
+
+  .inquiry__input {
+    width: 100%;
+    background-color: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 0;
+    padding: 0.7rem 0.8rem;
+    font-family: var(--serif);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--ink);
+    transition: border-color 140ms ease;
+  }
+
+  .inquiry__input::placeholder {
+    color: var(--ink-faint);
+  }
+
+  .inquiry__input:hover {
+    border-color: var(--ink-faint);
+  }
+
+  .inquiry__input:focus-visible {
+    border-color: var(--accent);
+  }
+
+  .inquiry__select {
+    appearance: none;
+    /* Room for the caret drawn below. */
+    padding-right: 2.2rem;
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+      linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+    background-position: right 1.1rem center, right 0.8rem center;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+  }
+
+  .inquiry__textarea {
+    resize: vertical;
+    min-height: 8rem;
+  }
+
+  /* Off-screen rather than display:none — some bots skip hidden inputs. */
+  .inquiry__hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .inquiry__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-5);
+  }
+
+  .inquiry__reply {
+    font-family: var(--grotesque);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
+
+  @media (max-width: 640px) {
+    .inquiry__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* --- mailto block (shown while formEndpoint is empty) ------------------ */
+
+  .mailto {
+    margin-top: var(--space-5);
+    border-top: 1px solid var(--line);
+    padding-top: var(--space-5);
+  }
+
+  .mailto__label {
+    display: block;
+    margin-bottom: var(--space-2);
+  }
+
+  .mailto__link {
+    font-family: var(--serif);
+    font-size: clamp(1.5rem, 1.1rem + 1.7vw, 2.05rem);
+    line-height: 1.25;
+    letter-spacing: -0.008em;
+  }
+
+  .mailto__link a {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
+  .mailto__hint {
+    margin-top: var(--space-4);
+    color: var(--ink-soft);
+  }
+
+  .mailto__reply {
+    display: block;
+    margin-top: var(--space-3);
+  }
+</style>

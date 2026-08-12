@@ -1,0 +1,115 @@
+---
+/**
+ * SessionsJsonLd — schema.org ProfessionalService + one Service per session tier.
+ * Owned by Agent D; belongs on /sessions only.
+ *
+ *   <SessionsJsonLd slot="head" />
+ *
+ * Emitted as a single @graph so the business node and the three service nodes
+ * cross-reference by @id, and both link back to PersonJsonLd's `#person`.
+ *
+ * Locality: SITE.city is empty until Ryu confirms it. While it is empty this
+ * component omits `address` and `areaServed` entirely rather than shipping a
+ * blank PostalAddress — an empty address is worse than no address for local SEO.
+ *
+ * Prices: deliberately absent. Every tier is "starting at $TODO" on the page, and
+ * a schema `offers.price` that disagrees with the page is a rich-results penalty.
+ * TODO(ryu): once tier prices are real, add
+ *   offers: { '@type': 'Offer', price: '350', priceCurrency: 'USD', … }
+ * to each service below and set `priceRange` (e.g. "$$") on the business node.
+ */
+import { SITE } from '../config';
+
+interface ServiceTier {
+  /** Slug used for the node @id — keep stable, it is a public identifier. */
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface Props {
+  services?: ServiceTier[];
+}
+
+// Names must match the tier cards Agent C renders on /sessions (SPEC.md § Sessions page).
+const DEFAULT_SERVICES: ServiceTier[] = [
+  {
+    id: 'headshot-session',
+    name: 'Headshot Session',
+    description:
+      'A focused sitting for professional headshots — one look, retouched selects delivered as web and print files.',
+  },
+  {
+    id: 'portrait-session',
+    name: 'Portrait Session',
+    description:
+      'A longer portrait sitting with multiple looks and locations, edited as a small set of finished frames.',
+  },
+  {
+    id: 'half-day-creative',
+    name: 'Half-Day Creative',
+    description:
+      'A half-day creative block for editorial, campaign, and personal-project work, scoped after a consult.',
+  },
+];
+
+const { services = DEFAULT_SERVICES } = Astro.props;
+
+const titleCased = SITE.name.charAt(0) + SITE.name.slice(1).toLowerCase();
+
+const BUSINESS_ID = `${SITE.url}/sessions/#business`;
+const PERSON_ID = `${SITE.url}/#person`;
+
+const city = SITE.city.trim();
+
+// Only present when the city is known; spreads to nothing otherwise.
+const locality = city
+  ? {
+      address: { '@type': 'PostalAddress', addressLocality: city },
+      areaServed: { '@type': 'City', name: city },
+    }
+  : {};
+
+const serviceNodes = services.map((tier) => ({
+  '@type': 'Service',
+  '@id': `${SITE.url}/sessions/#${tier.id}`,
+  name: tier.name,
+  serviceType: 'Photography',
+  description: tier.description,
+  provider: { '@id': BUSINESS_ID },
+  ...(city ? { areaServed: { '@type': 'City', name: city } } : {}),
+}));
+
+const business = {
+  '@type': 'ProfessionalService',
+  '@id': BUSINESS_ID,
+  name: `${titleCased} Photography`,
+  url: `${SITE.url}/sessions/`,
+  description:
+    'Photography sessions — headshots, portraits, and half-day creative work, booked directly.',
+  image: new URL('/og/sessions.jpg', SITE.url).href,
+  email: `mailto:${SITE.email}`,
+  founder: { '@id': PERSON_ID },
+  provider: { '@id': PERSON_ID },
+  ...(SITE.instagram ? { sameAs: [SITE.instagram] } : {}),
+  ...locality,
+  hasOfferCatalog: {
+    '@type': 'OfferCatalog',
+    name: 'Photography sessions',
+    itemListElement: services.map((tier) => ({
+      '@type': 'Offer',
+      itemOffered: { '@id': `${SITE.url}/sessions/#${tier.id}` },
+    })),
+  },
+};
+
+const graph = {
+  '@context': 'https://schema.org',
+  '@graph': [business, ...serviceNodes],
+};
+
+// Escape "<" so a stray "</script>" inside any string can never close this block early.
+const json = JSON.stringify(graph).replace(/</g, '\\u003c');
+---
+
+<script type="application/ld+json" is:inline set:html={json} />

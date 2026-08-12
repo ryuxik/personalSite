@@ -1,0 +1,79 @@
+---
+/**
+ * Seo — every <head> tag that varies per page. Owned by Agent D (SPEC.md § Information page + SEO).
+ *
+ * Usage — always as the "head" slot of BaseLayout, and never alongside BaseLayout's
+ * own `title` / `description` props (BaseLayout skips its fallback <title>/<meta
+ * description>/<link canonical> whenever the head slot is filled, so passing both
+ * would be redundant, not duplicated — but keep pages on one path or the other):
+ *
+ *   <BaseLayout>
+ *     <Seo slot="head" title="Sessions" description="…" ogImage="/og/sessions.jpg" />
+ *     …page…
+ *   </BaseLayout>
+ *
+ * Canonical mirrors BaseLayout + @astrojs/sitemap exactly: Astro.url.pathname
+ * unmodified, so /sessions/ stays /sessions/ and the two never disagree.
+ */
+import { SITE } from '../config';
+
+interface Props {
+  /** Page name. Rendered as "{title} — {SITE.name}". Omit on the home page for the bare SITE.title. */
+  title?: string;
+  /** Meta description. Falls back to SITE.description. */
+  description?: string;
+  /** Site-absolute path to the 1200×630 OG JPEG. Defaults per page (see OG_BY_PATH). */
+  ogImage?: string;
+  /** Open Graph object type. */
+  type?: 'website' | 'article' | 'profile';
+  /** Alt text for the OG image. */
+  imageAlt?: string;
+  /** Keep the page out of the index (404). Still followed, so link equity is not stranded. */
+  noindex?: boolean;
+}
+
+const { title, description, ogImage, type = 'website', imageAlt, noindex = false } = Astro.props;
+
+const pageTitle = title ? `${title} — ${SITE.name}` : SITE.title;
+const pageDescription = description ?? SITE.description;
+
+// Astro's own path shape, unmodified — matches what @astrojs/sitemap emits.
+const canonical = new URL(Astro.url.pathname, SITE.url).href;
+
+// Per-page OG default so callers only pass `ogImage` when they want something else.
+// Keys are the trailing-slash-stripped pathname. Files come from scripts/og-images.mjs.
+const OG_BY_PATH: Record<string, string> = {
+  '/': '/og/home.jpg',
+  '/sessions': '/og/sessions.jpg',
+  '/information': '/og/information.jpg',
+};
+
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const ogPath = ogImage ?? OG_BY_PATH[path] ?? '/og/home.jpg';
+const ogUrl = new URL(ogPath, SITE.url).href;
+const ogAlt = imageAlt ?? `${SITE.name} — photography`;
+---
+
+<title>{pageTitle}</title>
+<meta name="description" content={pageDescription} />
+<link rel="canonical" href={canonical} />
+{noindex && <meta name="robots" content="noindex, follow" />}
+
+<meta property="og:type" content={type} />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:locale" content="en_US" />
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={pageDescription} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogUrl} />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content={ogAlt} />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={pageTitle} />
+<meta name="twitter:description" content={pageDescription} />
+<meta name="twitter:image" content={ogUrl} />
+<meta name="twitter:image:alt" content={ogAlt} />
+{/* TODO(ryu): add <meta name="twitter:creator" content="@handle" /> once the X/Twitter handle is confirmed. */}

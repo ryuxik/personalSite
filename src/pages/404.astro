@@ -1,0 +1,68 @@
+---
+/**
+ * 404 — minimal (SPEC.md § Site map: wordmark + "Nothing here. → Overview").
+ * Content polish owned by Agent D. Noindexed, still followed.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Seo from '../components/Seo.astro';
+import { SITE } from '../config';
+---
+
+<BaseLayout>
+  <Seo
+    slot="head"
+    title="Not found"
+    description="That page does not exist."
+    ogImage="/og/home.jpg"
+    noindex
+  />
+
+  <div class="column notfound">
+    <p class="notfound__mark" aria-hidden="true">{SITE.name}</p>
+    <h1 class="notfound__title">Nothing here.</h1>
+    <p class="notfound__back"><a href="/">&rarr; Overview</a></p>
+  </div>
+</BaseLayout>
+
+<style>
+  /* 404 — Agent D. Scoped; uses global tokens only. */
+
+  .notfound {
+    padding-block: clamp(2rem, 9vh, 6rem);
+  }
+
+  .notfound__mark {
+    font-family: var(--grotesque);
+    font-size: clamp(1.1rem, 0.85rem + 1.2vw, 1.5rem);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wordmark);
+    color: var(--line);
+    margin-bottom: var(--space-7);
+  }
+
+  .notfound__title {
+    font-size: clamp(2.1rem, 1.4rem + 2.6vw, 3rem);
+  }
+
+  .notfound__back {
+    margin-top: var(--space-6);
+    font-family: var(--grotesque);
+    font-size: 0.76rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+  }
+
+  .notfound__back a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    padding-bottom: 0.2rem;
+    transition: border-color 140ms ease;
+  }
+
+  .notfound__back a:hover {
+    border-bottom-color: var(--accent);
+  }
+</style>

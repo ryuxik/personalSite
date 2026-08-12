@@ -1,0 +1,122 @@
+---
+/**
+ * Testimonial — one pull quote, sat beside/above a booking CTA.
+ * Owned by Agent C (see SPEC.md § Sessions page, item 5).
+ *
+ * Props:
+ *   name      — attribution name
+ *   role      — role / company line under the name
+ *   initials? — overrides the letters in the avatar circle (default: derived
+ *               from `name`)
+ *   avatar?   — set false to drop the avatar circle entirely (default true)
+ * Slot:
+ *   default   — the quote itself, without surrounding quote marks
+ */
+interface Props {
+  name: string;
+  role: string;
+  initials?: string;
+  avatar?: boolean;
+}
+
+const { name, role, initials, avatar = true } = Astro.props;
+
+/* "Marisol A." -> "MA"; falls back gracefully on single-word names. */
+const derivedInitials = name
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part.charAt(0).toUpperCase())
+  .join('');
+
+const avatarText = initials ?? derivedInitials;
+---
+
+<figure class="testimonial">
+  <blockquote class="testimonial__quote">
+    <slot />
+  </blockquote>
+
+  <figcaption class="testimonial__cite">
+    {
+      avatar && (
+        <span class="testimonial__avatar" aria-hidden="true">
+          {avatarText}
+        </span>
+      )
+    }
+    <span class="testimonial__who">
+      <cite class="testimonial__name">{name}</cite>
+      <span class="testimonial__role">{role}</span>
+    </span>
+  </figcaption>
+</figure>
+
+<style>
+  .testimonial {
+    max-width: 56ch;
+  }
+
+  .testimonial__quote {
+    /* Overrides the global blockquote rule's left rule with a quieter one. */
+    margin: 0;
+    padding-left: var(--space-5);
+    border-left: 1px solid var(--line);
+    font-family: var(--serif);
+    font-size: 1.14rem;
+    line-height: 1.62;
+    color: var(--ink);
+  }
+
+  .testimonial__quote :global(p) {
+    max-width: none;
+  }
+
+  .testimonial__cite {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    padding-left: calc(var(--space-5) + 1px);
+  }
+
+  /* Placeholder circle — swap for an <Image> once real headshots exist. */
+  .testimonial__avatar {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    font-family: var(--grotesque);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+  }
+
+  .testimonial__who {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.4;
+  }
+
+  .testimonial__name {
+    font-family: var(--grotesque);
+    font-size: 0.76rem;
+    font-weight: 500;
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--ink);
+  }
+
+  .testimonial__role {
+    font-family: var(--grotesque);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
+</style>

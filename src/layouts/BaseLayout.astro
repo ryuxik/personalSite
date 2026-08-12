@@ -1,0 +1,133 @@
+---
+/**
+ * BaseLayout — the site shell. Owned by Agent A (see SPEC.md § Ownership map).
+ *
+ * Slots:
+ *   "head"    — head extras. Agent D injects <Seo /> + JSON-LD here.
+ *   default   — page body, rendered inside <main id="main" class="site-main">.
+ *               Pages supply their own .column / .column-wide container.
+ *
+ * Props are a minimal fallback for <title>/<meta description>; once Agent D's
+ * <Seo /> component lands, pages pass their metadata through that instead and
+ * the fallback tags below are skipped whenever the "head" slot is filled.
+ */
+import '@fontsource-variable/newsreader/wght.css';
+import '@fontsource-variable/newsreader/wght-italic.css';
+import '@fontsource-variable/archivo/wght.css';
+import '../styles/global.css';
+import { SITE } from '../config';
+
+interface Props {
+  title?: string;
+  description?: string;
+  bodyClass?: string;
+}
+
+const { title, description, bodyClass } = Astro.props;
+
+const pageTitle = title ? `${title} — ${SITE.name}` : SITE.title;
+const pageDescription = description ?? SITE.description;
+
+// Trailing slash tolerant, so "/sessions" and "/sessions/" both mark active.
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+
+// Canonical keeps Astro's own path shape (directory format => trailing slash) so it
+// matches what @astrojs/sitemap emits. Agent D's <Seo /> should do the same.
+const canonical = new URL(Astro.url.pathname, SITE.url).href;
+
+const NAV = [
+  { href: '/', label: 'Overview' },
+  { href: '/sessions', label: 'Sessions' },
+  { href: '/information', label: 'Information' },
+] as const;
+
+const isActive = (href: string) => (href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`));
+
+const hasHeadExtras = Astro.slots.has('head');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#F1EEE5" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    {
+      /* Fallback metadata — superseded by <Seo /> once Agent D fills the "head" slot. */
+      !hasHeadExtras && (
+        <Fragment>
+          <title>{pageTitle}</title>
+          <meta name="description" content={pageDescription} />
+          <link rel="canonical" href={canonical} />
+        </Fragment>
+      )
+    }
+
+    <slot name="head" />
+  </head>
+
+  <body class={bodyClass}>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label={`${SITE.name} — home`}>{SITE.name}</a>
+
+      <nav class="nav nav--desktop" aria-label="Primary">
+        <ul class="nav__list">
+          {
+            NAV.map((item) => (
+              <li>
+                <a
+                  class="nav__link"
+                  href={item.href}
+                  aria-current={isActive(item.href) ? 'page' : undefined}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <nav class="nav nav--mobile" aria-label="Primary, compact">
+        <details class="menu">
+          <summary>Menu</summary>
+          <div class="menu__panel">
+            <ul>
+              {
+                NAV.map((item) => (
+                  <li>
+                    <a
+                      class="nav__link"
+                      href={item.href}
+                      aria-current={isActive(item.href) ? 'page' : undefined}
+                    >
+                      {item.label}
+                    </a>
+                  </li>
+                ))
+              }
+            </ul>
+          </div>
+        </details>
+      </nav>
+    </header>
+
+    <main id="main" class="site-main">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        <span>© 2026 {SITE.name.charAt(0) + SITE.name.slice(1).toLowerCase()}</span>
+        <span class="site-footer__sep" aria-hidden="true">·</span>
+        <a href={SITE.instagram} rel="me noopener noreferrer" target="_blank">Instagram</a>
+      </p>
+    </footer>
+  </body>
+</html>

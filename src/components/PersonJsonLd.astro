@@ -1,0 +1,56 @@
+---
+/**
+ * PersonJsonLd — schema.org Person for the site's one human. Owned by Agent D.
+ *
+ * Site-wide identity node. Applied on /information (the page that is *about* the
+ * person); SessionsJsonLd references the same @id so the graph stays connected
+ * without repeating the Person on every page.
+ *
+ * Drop it in the head slot next to <Seo />:
+ *   <PersonJsonLd slot="head" />
+ */
+import { SITE } from '../config';
+
+interface Props {
+  /** Human-readable name. Defaults to SITE.name in title case ("RYUXIK" → "Ryuxik"). */
+  name?: string;
+  jobTitle?: string;
+  description?: string;
+  /** Site-absolute path or absolute URL to a representative image. */
+  image?: string;
+  /** Extra profile URLs (Instagram from config is always included). */
+  sameAs?: string[];
+}
+
+// TODO(ryu): if the brand name and the legal/credited name differ, pass `name` explicitly here.
+const titleCased = SITE.name.charAt(0) + SITE.name.slice(1).toLowerCase();
+
+const {
+  name = titleCased,
+  jobTitle = 'Photographer',
+  description = SITE.description,
+  image = '/og/information.jpg',
+  sameAs = [],
+} = Astro.props;
+
+const profiles = [SITE.instagram, ...sameAs].filter((url): url is string => Boolean(url));
+
+const person = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  '@id': `${SITE.url}/#person`,
+  name,
+  url: `${SITE.url}/`,
+  jobTitle,
+  description,
+  image: new URL(image, SITE.url).href,
+  email: `mailto:${SITE.email}`,
+  ...(profiles.length > 0 ? { sameAs: profiles } : {}),
+  knowsAbout: ['Portrait photography', 'Creative portraiture', 'Headshot photography'],
+};
+
+// Escape "<" so a stray "</script>" inside any string can never close this block early.
+const json = JSON.stringify(person).replace(/</g, '\\u003c');
+---
+
+<script type="application/ld+json" is:inline set:html={json} />

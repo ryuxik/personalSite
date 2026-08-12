@@ -1,0 +1,123 @@
+---
+/**
+ * Faq — one <details>/<summary> question. No JS: the open/closed indicator is
+ * pure CSS. Owned by Agent C (see SPEC.md § Sessions page, item 6).
+ *
+ * Props:
+ *   q     — the question (summary text)
+ *   open? — render expanded on load (default false)
+ * Slot:
+ *   default — the answer; block content welcome (<p>, <ul>, links)
+ */
+interface Props {
+  q: string;
+  open?: boolean;
+}
+
+const { q, open = false } = Astro.props;
+---
+
+<details class="faq" open={open}>
+  <summary class="faq__q">
+    <span class="faq__q-text">{q}</span>
+    <span class="faq__mark" aria-hidden="true"></span>
+  </summary>
+  <div class="faq__a">
+    <slot />
+  </div>
+</details>
+
+<style>
+  .faq {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .faq:first-of-type {
+    border-top: 1px solid var(--line);
+  }
+
+  .faq__q {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4) 0;
+    cursor: pointer;
+    list-style: none;
+    font-family: var(--serif);
+    font-size: 1.06rem;
+    line-height: 1.5;
+    color: var(--ink);
+    transition: color 140ms ease;
+  }
+
+  .faq__q::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq__q::marker {
+    content: '';
+  }
+
+  .faq__q:hover {
+    color: var(--accent);
+  }
+
+  .faq__q-text {
+    text-wrap: balance;
+  }
+
+  /* Plus / minus drawn from two bars — no icon font, no SVG, no JS. */
+  .faq__mark {
+    position: relative;
+    flex: 0 0 auto;
+    width: 0.72rem;
+    height: 0.72rem;
+    margin-top: 0.28rem;
+  }
+
+  .faq__mark::before,
+  .faq__mark::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: var(--ink-soft);
+    transform: translateY(-50%);
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+
+  /* The vertical bar of the "+" — rotated away when the item opens. */
+  .faq__mark::after {
+    transform: translateY(-50%) rotate(90deg);
+  }
+
+  .faq[open] .faq__mark::after {
+    transform: translateY(-50%) rotate(0deg);
+    opacity: 0;
+  }
+
+  .faq[open] .faq__q {
+    color: var(--accent);
+  }
+
+  .faq[open] .faq__mark::before,
+  .faq[open] .faq__mark::after {
+    background-color: var(--accent);
+  }
+
+  .faq__a {
+    padding: 0 0 var(--space-5);
+    color: var(--ink-soft);
+  }
+
+  .faq__a :global(p) {
+    max-width: var(--measure);
+  }
+
+  .faq__a :global(p + p) {
+    margin-top: 0.9em;
+  }
+</style>

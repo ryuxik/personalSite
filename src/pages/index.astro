@@ -1,0 +1,83 @@
+---
+/**
+ * Overview — the curated stream. There is no other furniture on this page:
+ * shoots run newest first, each set's frames full-width, one caption line under
+ * each set. No lightbox, no genre nav (SPEC.md § Site map, § Content model).
+ *
+ * The <h1> is visually hidden on purpose: the photographs are the page, but the
+ * document still needs one heading for screen readers and crawlers.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Seo from '../components/Seo.astro';
+import StreamFigure from '../components/StreamFigure.astro';
+import { getStream } from '../lib/photos';
+
+const stream = await getStream();
+---
+
+<BaseLayout>
+  <Seo
+    slot="head"
+    title="Overview"
+    description="Selected photography — creative portraiture, personal and commissioned work."
+    ogImage="/og/home.jpg"
+  />
+  <h1 class="visually-hidden">Overview — selected work</h1>
+
+  {
+    /*
+     * Runs synchronously, before the stream below is parsed, so the browser
+     * never paints a frame at full opacity and then hides it. Per the fade-up
+     * contract: nothing is hidden unless this script has added .fade-up-ready,
+     * which it skips entirely under prefers-reduced-motion or without
+     * IntersectionObserver.
+     */
+  }
+  <script is:inline>
+    (function () {
+      var root = document.documentElement;
+      if (!('IntersectionObserver' in window)) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      root.classList.add('fade-up-ready');
+
+      function reveal() {
+        var targets = document.querySelectorAll('.fade-up');
+        if (!targets.length) {
+          root.classList.remove('fade-up-ready');
+          return;
+        }
+        var observer = new IntersectionObserver(
+          function (entries) {
+            for (var i = 0; i < entries.length; i += 1) {
+              if (!entries[i].isIntersecting) continue;
+              entries[i].target.classList.add('is-visible');
+              observer.unobserve(entries[i].target);
+            }
+          },
+          { rootMargin: '0px 0px -6% 0px', threshold: 0.04 },
+        );
+        for (var i = 0; i < targets.length; i += 1) observer.observe(targets[i]);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', reveal, { once: true });
+      } else {
+        reveal();
+      }
+    })();
+  </script>
+
+  <div class="column-wide bleed stream">
+    {stream.map((entry, index) => <StreamFigure entry={entry} lead={index === 0} />)}
+
+    {
+      stream.length === 0 && (
+        <p class="faint">
+          {/* TODO(ryu): drop a folder into src/content/shoots/ — see README. */}
+          No shoots published yet.
+        </p>
+      )
+    }
+  </div>
+</BaseLayout>

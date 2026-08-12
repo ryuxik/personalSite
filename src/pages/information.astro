@@ -1,0 +1,140 @@
+---
+/**
+ * Information — bio + contact. Owned by Agent D (SPEC.md § Information page + SEO).
+ *
+ * One third-person bio paragraph, the email as a large serif link, Instagram.
+ * Nothing else — the air is the design.
+ *
+ * The bio below is a REAL structured placeholder: origin → training → one
+ * credential → where the work appears. Every fact Ryu has to supply is an inline
+ * TODO(ryu) span, visible on the page on purpose, so nothing ships as a lie.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Seo from '../components/Seo.astro';
+import PersonJsonLd from '../components/PersonJsonLd.astro';
+import { SITE } from '../config';
+
+const instagramHandle = SITE.instagram.replace(/\/+$/, '').split('/').pop() ?? 'instagram';
+---
+
+<BaseLayout>
+  <Seo
+    slot="head"
+    title="Information"
+    description="Ryuxik is a photographer working in creative portraiture. Bio, email, and Instagram."
+    ogImage="/og/information.jpg"
+    type="profile"
+  />
+  <PersonJsonLd slot="head" />
+
+  <div class="column">
+    <h1>Information</h1>
+
+    <p class="bio">
+      Ryuxik is a photographer working mostly in creative portraiture. He picked up a camera
+      <span class="todo">TODO(ryu): origin — where you're from and how you started, one clause</span>,
+      and learned the craft
+      <span class="todo">TODO(ryu): training — school, apprenticeship, a mentor, or the self-taught route</span>.
+      His work has been
+      <span class="todo">TODO(ryu): one credential — an award, a residency, a group show, or a named client</span>,
+      and appears in
+      <span class="todo">TODO(ryu): where the work appears — publications, galleries, or brands</span>.
+      He photographs people first, takes a small number of commissions each year, and works out of
+      <span class="todo">TODO(ryu): city — also fill SITE.city in src/config.ts</span>.
+    </p>
+
+    <section class="contact" aria-labelledby="contact-heading">
+      <h2 class="label label--ink" id="contact-heading">Contact</h2>
+
+      <p class="contact__email">
+        <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
+      </p>
+
+      <p class="contact__social">
+        <a href={SITE.instagram} rel="me noopener noreferrer" target="_blank">
+          Instagram <span class="contact__handle">@{instagramHandle}</span>
+        </a>
+      </p>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  /* Information page — Agent D. Scoped; uses global tokens only. */
+
+  h1 {
+    margin-bottom: var(--space-6);
+  }
+
+  .bio {
+    font-size: 1.12rem;
+    line-height: 1.75;
+  }
+
+  /* Visible placeholder. Deliberately loud enough to be impossible to ship by accident. */
+  .todo {
+    font-family: var(--grotesque);
+    font-size: 0.8em;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+    border-bottom: 1px dotted color-mix(in srgb, var(--accent) 55%, transparent);
+    padding: 0.05em 0.28em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  .contact {
+    margin-top: var(--space-9);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--line);
+  }
+
+  .contact__email {
+    margin-top: var(--space-5);
+    font-family: var(--serif);
+    font-size: clamp(1.5rem, 1.05rem + 1.9vw, 2.25rem);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    word-break: break-word;
+  }
+
+  .contact__email a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0.06em;
+    transition: color 140ms ease, border-color 140ms ease;
+  }
+
+  .contact__email a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .contact__social {
+    margin-top: var(--space-5);
+    font-family: var(--grotesque);
+    font-size: 0.76rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+  }
+
+  .contact__social a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+
+  .contact__social a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .contact__handle {
+    color: var(--ink-faint);
+    letter-spacing: 0.08em;
+    text-transform: none;
+  }
+</style>

@@ -1,0 +1,287 @@
+---
+/**
+ * CalEmbed — a booking section wrapping one Cal.com inline embed.
+ * Owned by Agent C (see SPEC.md § Sessions page, item 4).
+ *
+ * Behaviour:
+ *   - Renders a framed container that ALWAYS contains a readable fallback
+ *     ("Email {SITE.email} and I'll reply within 24 hours." + a direct link to
+ *     the cal.com page). Never a blank box.
+ *   - Cal's official inline-embed loader is injected only when the section
+ *     first approaches the viewport (IntersectionObserver, rootMargin 400px),
+ *     so /sessions ships zero third-party JS until the visitor scrolls down.
+ *   - The fallback is replaced ONLY once the embed actually mounts a child
+ *     node. If embed.js is blocked, offline, or slow, the fallback stays.
+ *   - Each instance initialises Cal under its own namespace (derived from
+ *     `id`), so two embeds on one page never clobber each other's config.
+ *
+ * Props:
+ *   calLink  — Cal event path, e.g. "ryuxik/intro-call" (from src/config.ts)
+ *   heading  — section <h2> text
+ *   id       — stable DOM id; doubles as the anchor target (#consult, #book)
+ *              and as the Cal embed namespace
+ *   eyebrow? — optional small uppercase kicker above the heading
+ * Slot:
+ *   default  — optional description paragraph(s) between heading and embed
+ */
+import { SITE } from '../config';
+
+interface Props {
+  calLink: string;
+  heading: string;
+  id: string;
+  eyebrow?: string;
+}
+
+const { calLink, heading, id, eyebrow } = Astro.props;
+
+/* Namespace must be a plain identifier-ish string — Cal keys `Cal.ns` with it. */
+const namespace = id.replace(/[^A-Za-z0-9_-]/g, '') || 'cal';
+const headingId = `${id}-heading`;
+const mountSelector = `#${id} [data-cal-mount]`;
+const calPageUrl = `https://cal.com/${calLink}`;
+
+/*
+ * Runtime island. Kept as a raw string and emitted with `is:inline set:html`
+ * so each instance gets its own copy with its own ids baked in (Astro would
+ * otherwise hoist + de-duplicate a bundled <script>, which is wrong here —
+ * we need one per embed). Everything lives inside an IIFE, so two copies on
+ * one page share no globals.
+ */
+const initScript = `
+(function () {
+  var section = document.getElementById(${JSON.stringify(id)});
+  if (!section) return;
+  var box = section.querySelector('[data-cal-state]');
+  var mount = section.querySelector('[data-cal-mount]');
+  if (!box || !mount) return;
+
+  var NS = ${JSON.stringify(namespace)};
+  var started = false;
+
+  function mounted() {
+    return !!mount.firstElementChild;
+  }
+
+  function boot() {
+    if (started) return;
+    started = true;
+    box.setAttribute('data-cal-state', 'loading');
+
+    /* Cal.com's official inline-embed loader, verbatim. Running it more than
+       once per page is safe by design: it keeps the first window.Cal and the
+       cal.loaded guard means embed.js is only ever appended once. */
+    (function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if (typeof namespace === "string") { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ["initNamespace", namespace]); } else p(cal, ar); return; } p(cal, ar); }; })(window, "https://app.cal.com/embed/embed.js", "init");
+
+    try {
+      Cal("init", NS, { origin: "https://cal.com" });
+      /* theme:"light" here in \`config\` is the one that counts — config becomes
+         the embed iframe's query string (?theme=light). Setting theme only in
+         the "ui" call below does NOT reach the iframe (verified). Without it
+         Cal follows the visitor's prefers-color-scheme and drops a dark
+         scheduler into a light-only page (SPEC § Hard rules: no dark mode). */
+      Cal.ns[NS]("inline", {
+        elementOrSelector: ${JSON.stringify(mountSelector)},
+        config: { layout: "month_view", theme: "light" },
+        calLink: ${JSON.stringify(calLink)}
+      });
+      Cal.ns[NS]("ui", {
+        theme: "light",
+        hideEventTypeDetails: false,
+        layout: "month_view",
+        cssVarsPerTheme: { light: { "cal-brand": "#7A4A2B" } }
+      });
+    } catch (err) {
+      box.setAttribute('data-cal-state', 'failed');
+      return;
+    }
+
+    /* Measured Cal behaviour, not guesswork:
+         success — <cal-inline> mounts in ~150ms and never carries a loading
+                   attribute at all;
+         failure — the same element gains loading="failed" + data-error-code
+                   (404 while the event type doesn't exist on cal.com yet),
+                   and only after the round trip, ~5s in.
+       So "it mounted" is the ready signal, which shows a working calendar
+       immediately; we keep watching afterwards and pull the fallback back up
+       if an error lands late. Cal's own "Error Code: 404" panel is hidden in
+       that state — the email address is the more useful thing to show. */
+    var failed = false;
+    var noMountTimer;
+    var stopWatchingTimer;
+    var mo = null;
+
+    function stopWatching() {
+      if (mo) mo.disconnect();
+      window.clearTimeout(noMountTimer);
+      window.clearTimeout(stopWatchingTimer);
+    }
+
+    function evaluate() {
+      if (failed) return;
+      if (mount.querySelector('[loading="failed"], [data-error-code]')) {
+        failed = true;
+        stopWatching();
+        box.setAttribute('data-cal-state', 'failed');
+        return;
+      }
+      if (!mounted()) return;
+      window.clearTimeout(noMountTimer);
+      box.setAttribute('data-cal-state', 'ready');
+    }
+
+    if ('MutationObserver' in window) {
+      mo = new MutationObserver(evaluate);
+      mo.observe(mount, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['loading', 'data-error-code']
+      });
+      /* A late error can only arrive so late; stop listening eventually. */
+      stopWatchingTimer = window.setTimeout(stopWatching, 30000);
+    }
+
+    /* Blocked, offline, or embed.js never arrives: nothing ever mounts, so the
+       email fallback stays with its explanatory line switched on. */
+    noMountTimer = window.setTimeout(function () {
+      if (mounted()) return;
+      stopWatching();
+      box.setAttribute('data-cal-state', 'failed');
+    }, 15000);
+
+    evaluate();
+  }
+
+  if (!('IntersectionObserver' in window)) {
+    boot();
+    return;
+  }
+
+  var io = new IntersectionObserver(function (entries) {
+    for (var i = 0; i < entries.length; i++) {
+      if (!entries[i].isIntersecting) continue;
+      io.disconnect();
+      boot();
+      return;
+    }
+  }, { rootMargin: '400px 0px' });
+
+  io.observe(section);
+})();
+`;
+---
+
+<section class="cal-section" id={id} aria-labelledby={headingId}>
+  {eyebrow && <span class="eyebrow">{eyebrow}</span>}
+  <h2 id={headingId}>{heading}</h2>
+
+  <div class="cal-section__intro">
+    <slot />
+  </div>
+
+  <div class="cal" data-cal-state="idle">
+    <!-- Cal.com injects the scheduler here once the section nears the viewport. -->
+    <div class="cal__mount" data-cal-mount></div>
+
+    <div class="cal__fallback">
+      <p class="cal__lead">
+        Email <a href={`mailto:${SITE.email}`}>{SITE.email}</a> and I&rsquo;ll reply within 24 hours.
+      </p>
+      <p class="cal__note cal__note--loading">Loading the calendar&hellip;</p>
+      <p class="cal__note cal__note--failed">
+        The scheduler didn&rsquo;t load. Email works just as well.
+      </p>
+      <a class="button button--quiet" href={calPageUrl} rel="noopener noreferrer" target="_blank">
+        Open booking page
+      </a>
+    </div>
+  </div>
+</section>
+
+<script is:inline set:html={initScript}></script>
+
+<style>
+  .cal-section__intro:empty {
+    display: none;
+  }
+
+  .cal-section__intro {
+    margin-top: var(--space-4);
+    color: var(--ink-soft);
+  }
+
+  /* Framed surface. min-height is what stops the layout jumping when Cal
+     swaps in — the fallback and the scheduler occupy roughly the same box. */
+  .cal {
+    margin-top: var(--space-5);
+    min-height: 24rem;
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    padding: var(--space-4);
+  }
+
+  .cal__mount {
+    /* Empty until Cal mounts, so it contributes no height on its own. */
+    width: 100%;
+  }
+
+  .cal__fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    min-height: 22rem;
+    padding: var(--space-5) var(--space-4);
+    text-align: center;
+  }
+
+  .cal__lead {
+    max-width: 34ch;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+
+  .cal__note {
+    font-family: var(--grotesque);
+    font-size: 0.74rem;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    /* Both notes are hidden until the state that owns them. */
+    display: none;
+  }
+
+  .cal[data-cal-state='loading'] .cal__note--loading,
+  .cal[data-cal-state='failed'] .cal__note--failed {
+    display: block;
+  }
+
+  /* Only a genuinely mounted embed removes the fallback. */
+  .cal[data-cal-state='ready'] .cal__fallback {
+    display: none;
+  }
+
+  /* Cal mounted but reported an error (bad/missing event type): hide its own
+     error panel and put the email fallback back. */
+  .cal[data-cal-state='failed'] .cal__mount {
+    display: none;
+  }
+
+  .cal[data-cal-state='ready'] {
+    min-height: 0;
+  }
+
+  @media (max-width: 640px) {
+    .cal {
+      min-height: 20rem;
+      padding: var(--space-3);
+    }
+
+    .cal__fallback {
+      min-height: 18rem;
+    }
+  }
+</style>

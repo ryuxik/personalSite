@@ -1,0 +1,108 @@
+---
+/**
+ * StreamFigure — one shoot in the Overview stream.
+ *
+ * Renders the shoot's frames full-width in filename order, then the single
+ * caption line that belongs to the whole set (SPEC.md § Content model).
+ *
+ * Each frame sits in an aspect-ratio box painted with its thumbhash, so the
+ * layout is final before a single byte of image data arrives (zero CLS) and the
+ * reader sees the photograph's colours immediately.
+ */
+import { Picture } from 'astro:assets';
+import type { StreamEntry } from '../lib/photos';
+
+interface Props {
+  entry: StreamEntry;
+  /** True for the first shoot: its opening frame is the page's LCP image. */
+  lead?: boolean;
+}
+
+const { entry, lead = false } = Astro.props;
+const { images, caption } = entry;
+
+/**
+ * The stream column is 1100px wide with a --gutter (max 2rem) each side, and
+ * goes edge-to-edge below 640px — see .column-wide.bleed in global.css.
+ */
+const SIZES = '(min-width: 1100px) 1036px, (min-width: 640px) calc(100vw - 4rem), 100vw';
+const WIDTHS = [480, 800, 1200, 1600];
+
+const frameStyle = (image: StreamEntry['images'][number]) =>
+  [
+    `aspect-ratio: ${image.width} / ${image.height}`,
+    `background-color: ${image.color}`,
+    image.thumbhash ? `background-image: url("${image.thumbhash}")` : null,
+  ]
+    .filter(Boolean)
+    .join('; ');
+---
+
+<figure class="shoot">
+  {
+    images.map((image, index) => {
+      const isLcp = lead && index === 0;
+      return (
+        <div class:list={['frame', !isLcp && 'fade-up']} style={frameStyle(image)}>
+          <Picture
+            src={image.src}
+            alt={image.alt}
+            widths={WIDTHS}
+            sizes={SIZES}
+            formats={['avif', 'webp']}
+            priority={isLcp}
+            loading={isLcp ? 'eager' : 'lazy'}
+            class="frame__img"
+            pictureAttributes={{ class: 'frame__picture' }}
+          />
+        </div>
+      );
+    })
+  }
+  <figcaption class="caption">{caption}</figcaption>
+</figure>
+
+<style>
+  .shoot {
+    margin: 0;
+  }
+
+  /* Air between bodies of work — much wider than the gap inside a set. */
+  .shoot + .shoot {
+    margin-top: clamp(3.5rem, 9vw, 6.5rem);
+  }
+
+  .frame {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    /* aspect-ratio, average colour and the thumbhash arrive as inline styles */
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  .frame + .frame {
+    margin-top: var(--space-4);
+  }
+
+  /* <Picture> renders <picture><img>; neither carries our scope class. */
+  .frame :global(picture) {
+    display: block;
+    height: 100%;
+  }
+
+  .frame :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @media (max-width: 640px) {
+    /* Frames bleed to the edges, so the caption needs the gutter back. */
+    .shoot > .caption {
+      padding-inline: var(--gutter);
+    }
+  }
+</style>

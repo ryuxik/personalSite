@@ -1,0 +1,458 @@
+---
+/**
+ * Sessions — the working page. Owned by Agent C (SPEC.md § Sessions page).
+ *
+ * Order, per spec: 1 intro · 2 track cards · 3 investment tiers · 4 booking
+ * embeds (with 5 testimonials sat above each) · 6 FAQ · 7 prep · 8 enquiry.
+ *
+ * Stable anchors for Agent D's JSON-LD / any deep links:
+ *   #consult  #book  #investment  #faq  #prep  #inquire
+ *
+ * Smooth in-page scrolling comes from `html { scroll-behavior: smooth }` in
+ * global.css, which already disables itself under prefers-reduced-motion.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Seo from '../components/Seo.astro';
+import SessionsJsonLd from '../components/SessionsJsonLd.astro';
+import CalEmbed from '../components/CalEmbed.astro';
+import Faq from '../components/Faq.astro';
+import InquiryForm from '../components/InquiryForm.astro';
+import Testimonial from '../components/Testimonial.astro';
+import { SITE } from '../config';
+
+interface Tier {
+  name: string;
+  price: string;
+  summary: string;
+  deliverables: string[];
+}
+
+/* TODO(ryu): confirm tier names, prices and deliverable counts before launch.
+   Prices render literally as "$TODO" on purpose — placeholders must be visible. */
+const TIERS: Tier[] = [
+  {
+    name: 'Headshot Session',
+    price: '$TODO',
+    summary: 'One look, one location, done inside an hour.',
+    deliverables: [
+      '45 minutes, one location, one change of clothes',
+      '6 retouched images, web and print files',
+      'Gallery delivered in 5 business days',
+      'Unlimited personal and professional use',
+    ],
+  },
+  {
+    name: 'Portrait Session',
+    price: '$TODO',
+    summary: 'Room to move — two looks, two settings, a real edit.',
+    deliverables: [
+      '2 hours, up to two locations',
+      '15 retouched images from a full contact sheet',
+      'Gallery delivered in 10 business days',
+      'Personal use included; commercial licensed separately',
+    ],
+  },
+  {
+    name: 'Half-Day Creative',
+    price: '$TODO',
+    summary: 'A built shoot: concept, styling, locations, the whole day-half.',
+    deliverables: [
+      '4 hours, multi-look, styling and location scouting included',
+      '30 retouched images plus the full contact sheet',
+      'Gallery delivered in 15 business days',
+      'Usage negotiated per project',
+    ],
+  },
+];
+
+/* TODO(ryu): tune this list once the real session flow settles. */
+const PREP: string[] = [
+  'Bring two or three outfit options on hangers. Solid colours and simple necklines read best; loud patterns and visible logos date fast.',
+  'Book haircuts and colour at least a week out — never the day before.',
+  'Sleep, water and a real meal beforehand do more for a portrait than any amount of retouching.',
+  'Skip new skincare, self-tanner or anything experimental in the week before.',
+  'Send me three reference images you like. Three is enough to align the entire session.',
+  'Arrive ten minutes early. Parking and finding the right door always take longer than you think.',
+];
+---
+
+<BaseLayout>
+  <Seo
+    slot="head"
+    title="Sessions"
+    description="Book a photography session — creative portraiture projects and standard headshot sessions."
+    ogImage="/og/sessions.jpg"
+  />
+  <SessionsJsonLd slot="head" />
+  {/* 1. Intro ------------------------------------------------------------ */}
+  <div class="column">
+    <h1>Sessions</h1>
+    <p class="lede">
+      Two ways to work together: a custom creative project, or a standard session you can book
+      directly.
+    </p>
+  </div>
+
+  {/* 2. Track cards ------------------------------------------------------ */}
+  <div class="column-wide section">
+    <h2 class="visually-hidden">Ways to work together</h2>
+    <div class="tracks">
+      <article class="card track">
+        <span class="eyebrow">Creative portraiture</span>
+        <h3 class="track__name">Start a project</h3>
+        <p class="track__pitch">
+          Concept-driven portraiture built around an idea — location, styling and light planned
+          together before anyone picks up a camera. Editorial, album art, personal work that needs
+          to be somebody&rsquo;s and not everybody&rsquo;s.
+        </p>
+        <p class="track__note">Custom projects — let&rsquo;s talk.</p>
+        <a class="button" href="#consult">Book a consult</a>
+      </article>
+
+      <article class="card track">
+        <span class="eyebrow">Headshots &amp; standard sessions</span>
+        <h3 class="track__name">Book now</h3>
+        <p class="track__pitch">
+          Fixed scope, fixed price, on the calendar in about two minutes. Headshots, portraits and
+          straightforward personal sessions where you already know what you need.
+        </p>
+        <p class="track__note">Pick a time that works.</p>
+        <a class="button" href="#book">See open times</a>
+      </article>
+    </div>
+  </div>
+
+  {/* 3. Investment ------------------------------------------------------- */}
+  <section class="column-wide section section--ruled" id="investment" aria-labelledby="investment-heading">
+    <span class="eyebrow">Investment</span>
+    <h2 id="investment-heading">What sessions cost</h2>
+
+    <div class="tiers">
+      {
+        TIERS.map((tier) => (
+          <article class="card tier">
+            <h3 class="tier__name">{tier.name}</h3>
+            <p class="tier__price">Starting at {tier.price}</p>
+            <p class="tier__summary">{tier.summary}</p>
+            <ul class="tier__list" role="list">
+              {tier.deliverables.map((item) => (
+                <li>{item}</li>
+              ))}
+            </ul>
+          </article>
+        ))
+      }
+    </div>
+
+    <p class="tiers__footnote">
+      Editorial and concept work is quoted after a consult.
+    </p>
+    <p class="tiers__todo">TODO(ryu): set real prices, tier names and deliverable counts.</p>
+  </section>
+
+  {/* 4 + 5. Booking, each embed preceded by a testimonial ---------------- */}
+  <div class="column-wide section section--ruled">
+    <Testimonial name="Client Name" role="Role, Company">
+      <p>
+        TODO(ryu): real quote, name, role, photo. Two or three sentences from someone you shot for
+        — what the session felt like, and what the pictures actually did for them afterwards.
+      </p>
+    </Testimonial>
+
+    <CalEmbed
+      id="consult"
+      eyebrow="Creative portraiture"
+      heading="Free 20-minute consult"
+      calLink={SITE.calConsult}
+    >
+      <p>
+        No pitch. We talk through the idea, the people, the location and the budget, and I tell you
+        straight whether I&rsquo;m the right photographer for it.
+      </p>
+    </CalEmbed>
+  </div>
+
+  <div class="column-wide section">
+    <Testimonial name="Client Name" role="Role, Company">
+      <p>
+        TODO(ryu): real quote, name, role, photo. Ideally from a headshot or standard-session client
+        — booking, turnaround and how the images got used.
+      </p>
+    </Testimonial>
+
+    <CalEmbed
+      id="book"
+      eyebrow={'Headshots & standard sessions'}
+      heading="Book a session"
+      calLink={SITE.calHeadshots}
+    >
+      <p>
+        Pick a slot and it&rsquo;s yours. Booking holds the date with a non-refundable retainer; the
+        balance is due on the day of the shoot.
+      </p>
+    </CalEmbed>
+  </div>
+
+  {/* 6. FAQ -------------------------------------------------------------- */}
+  <section class="column section section--ruled" id="faq" aria-labelledby="faq-heading">
+    <span class="eyebrow">Questions</span>
+    <h2 id="faq-heading">Before you book</h2>
+
+    <div class="faqs">
+      {/* TODO(ryu): confirm turnaround windows and whether rush delivery is offered. */}
+      <Faq q="How long until I get my photos?">
+        <p>
+          A private gallery of finished images lands within 5 to 15 business days depending on the
+          session — headshots are quickest, half-day creative work takes longest. A short preview of
+          three to five frames usually reaches you inside 48 hours, so you have something to use
+          straight away. Rush delivery is possible when the calendar allows; ask before you book.
+        </p>
+      </Faq>
+
+      <Faq q="What am I allowed to do with the images?">
+        <p>
+          Every session includes a personal-use licence: print them, post them, use them on your own
+          site and profiles. Commercial use — advertising, packaging, paid campaigns, anything that
+          sells something — is licensed separately and quoted per project.
+        </p>
+        <p>
+          I keep copyright and the right to show the work in my portfolio. If a shoot needs to stay
+          private, tell me before we shoot and we&rsquo;ll put it in writing.
+        </p>
+      </Faq>
+
+      {/* TODO(ryu): set the home city and the included travel radius (SITE.city is still empty). */}
+      <Faq q="Do you travel?">
+        <p>
+          Sessions within the metro area are included in the session fee. Beyond roughly an hour&rsquo;s
+          drive I add a travel fee, and multi-day or out-of-state work is quoted with travel and
+          lodging built into the estimate. I do take location work — start with a consult and
+          we&rsquo;ll scope it properly.
+        </p>
+      </Faq>
+
+      <Faq q="What happens if the weather turns?">
+        <p>
+          For outdoor sessions, overcast is good news — soft, even light and no squinting. We only
+          move for conditions that make the work impossible: heavy rain, high wind, lightning. I make
+          the call with you by the morning of the shoot, and we reschedule to the next date that
+          works for both of us at no extra cost.
+        </p>
+      </Faq>
+
+      <Faq q="Can I reschedule or cancel?">
+        <p>
+          Booking holds your date with a non-refundable retainer. Reschedule at least 48 hours ahead
+          and the retainer moves with you to the new date — one move, no fee.
+        </p>
+        <p>
+          Inside the 48-hour window, or for a no-show, the retainer is forfeit and a new one books
+          the next date. Weather calls are exempt from all of this.
+        </p>
+      </Faq>
+
+      <Faq q="What should I wear?">
+        <p>
+          Solid colours and simple shapes photograph best; busy patterns and a haircut from the day
+          before are the two most common regrets. Bring two or three options on hangers and
+          we&rsquo;ll choose together on the day. The full list is in
+          <a href="#prep">Before your session</a> below.
+        </p>
+      </Faq>
+    </div>
+  </section>
+
+  {/* 7. Prep guide ------------------------------------------------------- */}
+  <section class="column section section--ruled" id="prep" aria-labelledby="prep-heading">
+    <span class="eyebrow">Prep</span>
+    <h2 id="prep-heading">Before your session</h2>
+    <ul class="prep" role="list">
+      {PREP.map((item) => <li class="prep__item">{item}</li>)}
+    </ul>
+  </section>
+
+  {/* 8. Enquiry ---------------------------------------------------------- */}
+  <section class="column section section--ruled" id="inquire" aria-labelledby="inquire-heading">
+    <span class="eyebrow">Enquiries</span>
+    <h2 id="inquire-heading">Something else in mind?</h2>
+    <p class="muted">
+      Editorial commissions, unusual locations, anything that doesn&rsquo;t fit a tier — tell me
+      about it and I&rsquo;ll come back with a plan and a number.
+    </p>
+    <InquiryForm />
+  </section>
+</BaseLayout>
+
+<style>
+  /* --- 2. Track cards ---------------------------------------------------- */
+
+  .tracks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5);
+  }
+
+  .track {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-6);
+  }
+
+  .track__name {
+    font-size: 1.32rem;
+  }
+
+  .track__pitch {
+    margin-top: var(--space-4);
+    color: var(--ink-soft);
+  }
+
+  .track__note {
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-5);
+    font-family: var(--grotesque);
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--ink-faint);
+  }
+
+  /* Push the button to the bottom so both cards align regardless of copy. */
+  .track .button {
+    margin-top: auto;
+  }
+
+  /* --- 3. Tier cards ----------------------------------------------------- */
+
+  .tiers {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
+    margin-top: var(--space-6);
+  }
+
+  .tier {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tier__name {
+    font-family: var(--serif);
+    font-size: 1.24rem;
+  }
+
+  /* Numbers and hard data are always grotesque. */
+  .tier__price {
+    margin-top: var(--space-2);
+    font-family: var(--grotesque);
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+    color: var(--accent);
+  }
+
+  .tier__summary {
+    margin-top: var(--space-4);
+    font-size: 0.98rem;
+    color: var(--ink-soft);
+  }
+
+  .tier__list {
+    list-style: none;
+    margin: var(--space-5) 0 0;
+    padding: var(--space-4) 0 0;
+    border-top: 1px solid var(--line);
+    font-family: var(--grotesque);
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  .tier__list li + li {
+    margin-top: var(--space-3);
+  }
+
+  .tier__list li {
+    padding-left: var(--space-4);
+    position: relative;
+  }
+
+  .tier__list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 5px;
+    height: 1px;
+    background-color: var(--ink-faint);
+  }
+
+  .tiers__footnote {
+    margin-top: var(--space-5);
+    color: var(--ink-soft);
+  }
+
+  .tiers__todo {
+    margin-top: var(--space-2);
+    font-family: var(--grotesque);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
+
+  /* --- 6. FAQ ------------------------------------------------------------ */
+
+  .faqs {
+    margin-top: var(--space-5);
+  }
+
+  /* --- 7. Prep ----------------------------------------------------------- */
+
+  .prep {
+    list-style: none;
+    margin: var(--space-5) 0 0;
+    padding: 0;
+  }
+
+  .prep__item {
+    max-width: var(--measure);
+    padding: var(--space-4) 0 var(--space-4) var(--space-5);
+    border-top: 1px solid var(--line);
+    color: var(--ink-soft);
+    position: relative;
+  }
+
+  .prep__item:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .prep__item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: calc(var(--space-4) + 0.62em);
+    width: 8px;
+    height: 1px;
+    background-color: var(--ink-faint);
+  }
+
+  /* --- responsive -------------------------------------------------------- */
+
+  @media (max-width: 880px) {
+    .tiers {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .tracks {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .track {
+      padding: var(--space-5);
+    }
+  }
+</style>

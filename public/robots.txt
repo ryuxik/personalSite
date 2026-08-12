@@ -1,0 +1,9 @@
+# ryuxik.io — everything is public and indexable.
+# /sitemap-index.xml is emitted by @astrojs/sitemap (pages).
+# /image-sitemap.xml is emitted by src/pages/image-sitemap.xml.ts (stream photos).
+
+User-agent: *
+Allow: /
+
+Sitemap: https://ryuxik.io/sitemap-index.xml
+Sitemap: https://ryuxik.io/image-sitemap.xml
