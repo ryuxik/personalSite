@@ -27,40 +27,45 @@ interface Tier {
   deliverables: string[];
 }
 
-/* TODO(ryu): confirm tier names, prices and deliverable counts before launch.
-   Prices render literally as "$TODO" on purpose — placeholders must be visible. */
+/* Pricing set Aug 2026 from NYC market research: bottom edge of the professional
+   band ($250+ credibility floor), each tier just under a named competitor while
+   including slightly more. Review every January; raise 10-20% once >60% of
+   inquiries book. */
 const TIERS: Tier[] = [
   {
     name: 'Headshot Session',
-    price: '$TODO',
-    summary: 'One look, one location, done inside an hour.',
+    price: '$395',
+    summary: 'One hour, two looks, done properly.',
     deliverables: [
-      '45 minutes, one location, one change of clothes',
-      '6 retouched images, web and print files',
-      'Gallery delivered in 5 business days',
-      'Unlimited personal and professional use',
+      '60 minutes, up to two looks, studio or on-location in Manhattan/Brooklyn',
+      'Proof gallery of 30–40 selects within 24 hours',
+      '2 fully retouched finals within 72 hours, high-res + web crops',
+      'Unlimited personal and professional use, no expiration',
+      'Extra retouched image $65 · extra look $100',
     ],
   },
   {
     name: 'Portrait Session',
-    price: '$TODO',
-    summary: 'Room to move — two looks, two settings, a real edit.',
+    price: '$650',
+    summary: 'Room to move — three looks, two settings, a real edit.',
     deliverables: [
-      '2 hours, up to two locations',
-      '15 retouched images from a full contact sheet',
-      'Gallery delivered in 10 business days',
-      'Personal use included; commercial licensed separately',
+      '2 hours, up to three looks, one studio setup plus one exterior location',
+      'Planning call, moodboard and shot list before the shoot',
+      'Proof gallery of 50–70 selects within 48 hours',
+      '8 fully retouched finals within 5 business days',
+      'Unlimited personal and self-promotional use · hair & makeup add-on $350',
     ],
   },
   {
     name: 'Half-Day Creative',
-    price: '$TODO',
-    summary: 'A built shoot: concept, styling, locations, the whole day-half.',
+    price: '$1,450',
+    summary: 'A built shoot: concept, styling, setups, the whole half-day.',
     deliverables: [
-      '4 hours, multi-look, styling and location scouting included',
-      '30 retouched images plus the full contact sheet',
-      'Gallery delivered in 15 business days',
-      'Usage negotiated per project',
+      '4 hours, up to five looks across 2–3 setups, studio and/or location',
+      'Full pre-production: concept call, moodboard, shot list, scouting',
+      'Proof gallery of 100–150 selects within 3 days; 20 retouched finals in 10',
+      'One-year usage on owned and organic channels; paid media quoted separately',
+      'Studio, hair & makeup, styling and permits billed at cost',
     ],
   },
 ];
@@ -145,9 +150,9 @@ const PREP: string[] = [
     </div>
 
     <p class="tiers__footnote">
-      Editorial and concept work is quoted after a consult.
+      Editorial and concept work is quoted after a consult — creative fee from $2,000/day, with
+      usage and production scoped separately.
     </p>
-    <p class="tiers__todo">TODO(ryu): set real prices, tier names and deliverable counts.</p>
   </section>
 
   {/* 4 + 5. Booking, each embed preceded by a testimonial ---------------- */}
@@ -187,8 +192,9 @@ const PREP: string[] = [
       calLink={SITE.calHeadshots}
     >
       <p>
-        Pick a slot and it&rsquo;s yours. Booking holds the date with a non-refundable retainer; the
-        balance is due on the day of the shoot.
+        Pick a slot and it&rsquo;s yours. A $150 non-refundable retainer holds the date and counts
+        toward your session; the balance is due on the day of the shoot. Half-day and custom
+        projects book with a 50% retainer instead.
       </p>
     </CalEmbed>
   </div>
@@ -221,10 +227,10 @@ const PREP: string[] = [
         </p>
       </Faq>
 
-      {/* TODO(ryu): set the home city and the included travel radius (SITE.city is still empty). */}
       <Faq q="Do you travel?">
         <p>
-          Sessions within the metro area are included in the session fee. Beyond roughly an hour&rsquo;s
+          I&rsquo;m based in New York — sessions anywhere in the five boroughs are included in the
+          session fee. Beyond roughly an hour&rsquo;s
           drive I add a travel fee, and multi-day or out-of-state work is quoted with travel and
           lodging built into the estimate. I do take location work — start with a consult and
           we&rsquo;ll scope it properly.
@@ -242,8 +248,10 @@ const PREP: string[] = [
 
       <Faq q="Can I reschedule or cancel?">
         <p>
-          Booking holds your date with a non-refundable retainer. Reschedule at least 48 hours ahead
-          and the retainer moves with you to the new date — one move, no fee.
+          Booking holds your date with a non-refundable retainer — $150 for headshot and portrait
+          sessions, 50% for half-day and custom projects — which counts toward your balance.
+          Reschedule at least 48 hours ahead and the retainer moves with you to the new date — the
+          first move is free, further moves are $100 each.
         </p>
         <p>
           Inside the 48-hour window, or for a no-show, the retainer is forfeit and a new one books
@@ -392,14 +400,6 @@ const PREP: string[] = [
   .tiers__footnote {
     margin-top: var(--space-5);
     color: var(--ink-soft);
-  }
-
-  .tiers__todo {
-    margin-top: var(--space-2);
-    font-family: var(--grotesque);
-    font-size: 0.74rem;
-    letter-spacing: 0.04em;
-    color: var(--ink-faint);
   }
 
   /* --- 6. FAQ ------------------------------------------------------------ */
