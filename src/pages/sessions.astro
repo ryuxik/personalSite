@@ -17,8 +17,15 @@ import SessionsJsonLd from '../components/SessionsJsonLd.astro';
 import CalEmbed from '../components/CalEmbed.astro';
 import Faq from '../components/Faq.astro';
 import InquiryForm from '../components/InquiryForm.astro';
-import Testimonial from '../components/Testimonial.astro';
 import { SITE } from '../config';
+import { fallbackRung, getPhotoMeta } from '../lib/photos';
+
+/* VP's studio headshot (a real booked session) doubles as proof beside the
+   booking calendar. Served from the same HDR ladder as the stream. */
+const vpMeta = getPhotoMeta('vp/001.jpg');
+if (!vpMeta) throw new Error('sessions.astro: vp/001.jpg missing from photo-meta — run npm run generate');
+const vpLadder = vpMeta.ladder;
+const vpFallback = fallbackRung(vpLadder) ?? vpLadder[vpLadder.length - 1];
 
 interface Tier {
   name: string;
@@ -155,15 +162,13 @@ const PREP: string[] = [
     </p>
   </section>
 
-  {/* 4 + 5. Booking, each embed preceded by a testimonial ---------------- */}
+  {/*
+   * 4 + 5. Booking. Testimonial slots are OFF the page until real quotes exist
+   * (ask GL and VP) — visible placeholder praise reads as broken, not humble.
+   * When they land: <Testimonial name="…" role="…">quote</Testimonial> above
+   * each CalEmbed, component is ready in src/components/Testimonial.astro.
+   */}
   <div class="column-wide section section--ruled">
-    <Testimonial name="Client Name" role="Role, Company">
-      <p>
-        TODO(ryu): real quote, name, role, photo. Two or three sentences from someone you shot for
-        — what the session felt like, and what the pictures actually did for them afterwards.
-      </p>
-    </Testimonial>
-
     <CalEmbed
       id="consult"
       eyebrow="Creative portraiture"
@@ -178,12 +183,30 @@ const PREP: string[] = [
   </div>
 
   <div class="column-wide section">
-    <Testimonial name="Client Name" role="Role, Company">
-      <p>
-        TODO(ryu): real quote, name, role, photo. Ideally from a headshot or standard-session client
-        — booking, turnaround and how the images got used.
-      </p>
-    </Testimonial>
+    <figure class="book-proof">
+      <picture>
+        <source
+          media="(dynamic-range: high)"
+          type="image/jpeg"
+          srcset={vpLadder.map((r) => `${r.jpg} ${r.w}w`).join(', ')}
+          sizes="(min-width: 1100px) 1036px, (min-width: 640px) calc(100vw - 4rem), 100vw"
+        />
+        <source
+          type="image/avif"
+          srcset={vpLadder.map((r) => `${r.avif} ${r.w}w`).join(', ')}
+          sizes="(min-width: 1100px) 1036px, (min-width: 640px) calc(100vw - 4rem), 100vw"
+        />
+        <img
+          src={vpFallback.jpg}
+          width={vpFallback.w}
+          height={vpFallback.h}
+          alt="Studio headshot from a booked session — for VP"
+          loading="lazy"
+          decoding="async"
+        />
+      </picture>
+      <figcaption class="caption">for VP — Headshot Session · Mar '26</figcaption>
+    </figure>
 
     <CalEmbed
       id="book"
@@ -454,5 +477,20 @@ const PREP: string[] = [
     .track {
       padding: var(--space-5);
     }
+  }
+
+  /* --- VP headshot beside the booking calendar --------------------------- */
+  .book-proof {
+    margin: 0 0 var(--space-7);
+  }
+
+  .book-proof img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .book-proof .caption {
+    margin-top: var(--space-2);
   }
 </style>
