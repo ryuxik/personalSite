@@ -46,7 +46,15 @@ const PAPER = '#F1EEE5';
 const INK = '#33291E';
 const SHADE = '#0F0B07';
 
-const IMAGE_EXT = /\.(jpe?g|png|webp|avif|tiff?)$/i;
+const IMAGE_EXT = /\.(jpe?g|png|webp|tiff?)$/i;
+/**
+ * Masters, not deliverables: `<stem>.avif` and `<stem>.sdr.jpg` are the two
+ * halves scripts/convert-masters.mjs turns into the `<stem>.jpg` beside them.
+ * Neither is a publishable frame — and `.avif` sorts *before* `.jpg`, so
+ * without this the automatic cover pick would land on the master every time
+ * (and libvips cannot even open a tiled Lightroom AVIF).
+ */
+const MASTER_ONLY = /(\.sdr\.jpe?g|\.avif)$/i;
 
 /* ---------------------------------------------------------------- config ---- */
 
@@ -157,7 +165,9 @@ async function resolveCover(dir, coverField) {
   }
 
   try {
-    const files = (await readdir(dir)).filter((name) => IMAGE_EXT.test(name)).sort();
+    const files = (await readdir(dir))
+      .filter((name) => IMAGE_EXT.test(name) && !MASTER_ONLY.test(name))
+      .sort();
     return files.length > 0 ? join(dir, files[0]) : null;
   } catch {
     return null;

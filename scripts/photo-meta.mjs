@@ -67,7 +67,24 @@ const PHOTOS_DIR = resolve(ROOT, 'public/photos');
 
 /** Bump when the entry shape or the ladder policy changes — old caches are dropped. */
 const VERSION = 2;
+/**
+ * Deliverable masters only. `.avif` is deliberately absent: an AVIF in a shoot
+ * folder is an HDR *master* straight from Lightroom, not something to publish.
+ * scripts/convert-masters.mjs (which runs first in the `generate` chain)
+ * transcodes each one to the `.jpg` master this script then picks up — so
+ * converting here too would emit a duplicate, gain-map-less rung of every HDR
+ * photograph.
+ */
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png']);
+/**
+ * …and `<stem>.sdr.jpg` is excluded for the same reason, one level down: it is
+ * the authored SDR *half* of an HDR master (see convert-masters.mjs § FOLDER
+ * CONVENTION), which convert-masters pairs with `<stem>.avif` to write
+ * `<stem>.jpg`. It ends in .jpg and is a perfectly readable image, so nothing
+ * would complain — the photograph would just appear twice in the stream, once
+ * in HDR and once as its own flat SDR half.
+ */
+const SDR_SUFFIX = '.sdr.jpg';
 // thumbhash accepts at most 100×100 pixels of input.
 const THUMB_MAX = 100;
 
@@ -111,6 +128,7 @@ async function findImages() {
     }
     for (const file of files.filter((entry) => entry.isFile()).sort(byName)) {
       if (!IMAGE_EXT.has(extname(file.name).toLowerCase())) continue;
+      if (file.name.toLowerCase().endsWith(SDR_SUFFIX)) continue;
       found.push({ key: `${slug.name}/${file.name}`, path: join(dir, file.name) });
     }
   }
@@ -429,7 +447,8 @@ async function main() {
       // out the rotate() that would bake it in — so an HDR master that is not
       // already upright would ship sideways in JPEG while its AVIF twin (which
       // the HEIF encoder auto-orients) came out portrait. Refuse it instead.
-      // Lightroom's "Maximize Compatibility" JPEG export is always upright.
+      // Lightroom's HDR JPEG export is always upright, so this is a guard against
+      // masters that came from somewhere else, not an everyday failure.
       if (isHDR && (metadata.orientation ?? 1) !== 1) {
         throw new Error(
           `EXIF orientation ${metadata.orientation} on an HDR master — re-export with the ` +

@@ -11,6 +11,18 @@ public/og/
 # the HDR/SDR delivery ladder — re-encoded from the masters by photo-meta.mjs
 public/photos/
 
+# Masters straight out of Lightroom: the HDR half (.avif) and the authored SDR
+# half (.sdr.jpg). scripts/convert-masters.mjs turns the pair into the gain-map
+# .jpg beside them, and *that* .jpg is the master the site builds from and IS
+# committed — which is what lets CI build without libavif or libultrahdr.
+#
+# Both halves stay out of git: they are re-exportable from the catalogue, and the
+# committed .jpg already contains the .sdr.jpg — its primary image is those bytes
+# verbatim (measured base RMSE 0.0000) — so committing both would store the same
+# photograph twice.
+src/content/shoots/**/*.avif
+src/content/shoots/**/*.sdr.jpg
+
 # env
 .env
 .env.production

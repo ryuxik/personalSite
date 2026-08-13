@@ -105,14 +105,21 @@ client: ""                    # optional — "for {client}" in caption when pres
 date: 2026-03-14              # required — caption shows "Mar '26"
 location: "Oaxaca, MX"        # optional
 genre: portraiture            # 'portraiture' | 'street' | 'landscape' | 'events' | 'other'
-cover: ./001.jpg              # required, image() schema
+cover: ./001.jpg              # required — plain string path, not image()
 featured: 10                  # sort weight desc within same-date; default 0
 ```
+
+**`cover` is a `z.string()`, deliberately not astro:assets' `image()`.** Nothing consumes it as an
+`ImageMetadata`: the stream serves the pre-encoded ladder (§ HDR pipeline) and `scripts/og-images.mjs`
+reads the file off disk with its own frontmatter parser. `image()` therefore bought no type safety
+and made Astro emit a full-size, unreferenced copy of every cover into `dist/_astro/` — at ~90
+masters, hundreds of megabytes of dead weight in every deploy. The cost of the plain string is that
+a typo'd path no longer fails the build; og-images falls back to the first image in the folder.
 
 Caption format on the stream: `{subject}{client ? ` for ${client}` : ""} · {Mon 'YY}` — grotesque,
 small, --ink-faint. Genre appears in a per-shoot label ONLY in the optional list view, never as nav.
 
-Stream order: date desc, then featured desc. Creative portraiture leads naturally via dates/weights.
+Stream order: featured desc (the stream is a curated sequence — the opener is an editorial choice), then date desc for ties and unweighted shoots.
 
 `scripts/photo-meta.mjs` (prebuild, wired as `predev` + `prebuild`): walks shoots folders, and for
 every image emits into `src/generated/photo-meta.json`: width/height, `isHDR`, the delivery
@@ -172,6 +179,132 @@ Animating the wrapper instead would not help: ancestor opacity affects the image
 may sit in front of it (they re-encode and strip gain maps); `public/photos/` is static output,
 gitignored, rebuilt from the masters. Validate any real export with `node scripts/check-hdr.mjs
 <file|dir>` before trusting it.
+
+### AVIF masters — `scripts/convert-masters.mjs`
+
+Lightroom's HDR **JPEG** export already writes the gain map, so the usual master needs no
+conversion at all: it drops straight into a shoot folder as `<stem>.jpg`. Its HDR **AVIF** export
+does not — Lightroom 9.5 writes a single PQ rendition (CICP 12/16, `crs:HDREditMode=1` in the XMP)
+with no gain map and no setting that adds one. And sharp cannot read a gain map out of an AVIF
+regardless: its uhdr support is JPEG-in/JPEG-out, and a plain decode silently drops the HDR half.
+
+So an AVIF master is converted to a gain-map JPEG **once**, by `scripts/convert-masters.mjs`, which
+runs first in the `generate` chain:
+
+```
+convert-masters  →  photo-meta  →  og-images
+```
+
+It scans `src/content/shoots/*/` and writes `<stem>.jpg` beside each master, skipping work whose
+output is already current (mtime+size stamps for *both* inputs, in
+`src/generated/converted-masters.json`, the same style photo-meta uses).
+
+**Folder convention.** A shoot folder holds at most three files per photograph:
+
+| File | What | Git |
+| ---- | ---- | --- |
+| `<stem>.avif` | HDR master, Lightroom "HDR Output" → AVIF | ignored |
+| `<stem>.sdr.jpg` | the authored SDR master of the same frame | ignored |
+| `<stem>.jpg` | the gain-map JPEG the site builds from | **committed** |
+
+Both masters are gitignored: they are re-exportable from the catalogue, and the committed `.jpg`
+already *contains* the `.sdr.jpg` — its primary image is those bytes verbatim — so committing both
+would store the same photograph twice. Committing the derived `.jpg` is what lets CI and a fresh
+clone build with neither libavif nor libultrahdr installed. `photo-meta`'s `IMAGE_EXT` excludes
+`.avif` and its scan excludes `*.sdr.jpg`, so it only ever sees the converted JPEG — otherwise
+every HDR photograph would appear twice in the stream, once properly and once as its own flat SDR
+half. `og-images` excludes both for the same reason when it auto-picks a shoot cover.
+
+**Two modes.** Which one runs depends on whether the `.avif` carries a gain map:
+
+*PAIR mode* (what Lightroom 9.5 needs) — `<stem>.avif` is a bare PQ rendition and `<stem>.sdr.jpg`
+is the graded SDR. libultrahdr computes the gain map from the two intents, which is exactly what a
+gain map is: the per-pixel ratio between an SDR rendition and an HDR one.
+
+| Step | Tool | Note |
+| ---- | ---- | ---- |
+| decode the HDR intent | `avifdec` → 16-bit PNG | PQ-coded, source primaries |
+| read it | sharp **`.toColourspace('rgb16')`**`.raw({depth:'ushort'})` | the cast is load-bearing — see below |
+| match gamuts | 3×3 matrix into the SDR base's primaries | else libultrahdr sets `useBaseColorSpace=0` and libvips refuses the file |
+| pack | RGBA1010102 | little-endian uint32, R bits 0–9, G 10–19, B 20–29, A 30–31 |
+| assemble | `ultrahdr_app -m 0` (scenario 3) | raw HDR intent + **compressed** SDR JPEG |
+
+`-t 2 -C n -c n -a 5 -M 1 -s 1 -Q 95 -D 1 -L <peak>`. Three of those are the ones that go wrong
+quietly:
+
+- **`.toColourspace('rgb16')`.** sharp's default pipeline interpretation is 8-bit sRGB, so
+  `raw({depth:'ushort'})` alone returns `value >> 8` widened into a ushort — the 10-bit master
+  becomes 8-bit and every highlight ratio is wrong. Verified against a from-scratch zlib PNG decode.
+- **`-C` / `-c` (gamut).** They must agree, or libultrahdr writes `useBaseColorSpace=0` and libvips
+  then refuses the file outright ("gainmap image is expected to contain alternate image color space
+  in the form of ICC"), taking the whole ladder down. So the HDR intent is converted into the SDR
+  base's primaries (read from its ICC) rather than mislabelled — also 1.2 dB more accurate.
+  libultrahdr cross-checks `-c` against that ICC and refuses a mismatch, so it cannot go unnoticed.
+- **`-L` (target display peak, nits).** Sets `hdrCapacityMax = L / 203` — the display headroom at
+  which the *whole* map gets applied. libultrahdr's PQ default is 10000 nits → 5.62 stops, so a
+  1.5-stop laptop would apply a quarter of the map and the photograph would render flat. It is set
+  to the master's own measured peak luminance. It moves only the metadata, not the signal.
+
+*AVIF mode* (kept for the day Lightroom writes gain-map AVIFs) — everything is inside the one file:
+`avifgainmaputil printmetadata` + `extractgainmap`, `avifdec` for the authored base, sharp to
+re-encode the map as JPEG at q95 **4:4:4** (it is not a photograph; subsampling doubles its error),
+and `ultrahdr_app -m 0` scenario 4 to copy both compressed images in verbatim.
+
+**Both modes preserve the SDR base exactly.** It goes to `ultrahdr_app` as a compressed JPEG and is
+copied into the output container without being decoded, re-tone-mapped or re-encoded — measured
+base RMSE 0.0000, max |delta| 0. As everywhere else in this pipeline: **never `withGainMap()`**.
+
+**Metadata mapping, ISO 21496-1 → libultrahdr** (AVIF mode only). The formats carry the same
+quantities in different units — ISO stores gains and headrooms as log2, libultrahdr's config wants
+them linear. Wrong values here do not fail, they just ship a wrong HDR rendition:
+
+| `printmetadata` field | config key | transform |
+| --------------------- | ---------- | --------- |
+| Gain Map Min | `--minContentBoost` | `2^x` |
+| Gain Map Max | `--maxContentBoost` | `2^x` |
+| Base headroom | `--hdrCapacityMin` | `2^x` |
+| Alternate headroom | `--hdrCapacityMax` | `2^x` |
+| Gain Map Gamma | `--gamma` | as-is |
+| Base Offset | `--offsetSdr` | as-is |
+| Alternate Offset | `--offsetHdr` | as-is |
+| Use Base Color Space | `--useBaseColorSpace` | True→1 / False→0 |
+
+ISO stores each per channel (R/G/B) where libultrahdr has one slot; the script refuses a file whose
+channels disagree rather than quietly keeping red's value for all three.
+
+**Partial folders are normal.** An `.avif` with no `.sdr.jpg` yet logs "awaiting SDR export" and
+the run continues — exports arrive in batches. A `.sdr.jpg` with no `.avif` is reported as a note.
+A size mismatch between the two halves is a hard error naming both.
+
+**Tooling is optional at build time.** `brew install libavif libultrahdr`. Only the tools the
+pending work actually needs are required — pair mode never calls `avifgainmaputil`, and its absence
+downgrades to "assume no gain map" rather than stopping the run. When the load-bearing ones are
+absent the script warns, skips, and exits 0.
+
+Two caveats worth knowing before the first real export:
+
+- **8192px cap.** The Homebrew `libultrahdr` bottle is compiled with `UHDR_MAX_DIMENSION=8192`. A
+  master exported at the documented 2560px long edge is far under it, but a full-resolution export
+  off a 61MP body (9504×6336) is not, and the script says so with the fix. Lifting it means
+  building libultrahdr from source with `-DUHDR_MAX_DIMENSION=16384` and pointing `$ULTRAHDR_APP`
+  at the result.
+- **No AVIF support in the bottle.** libultrahdr 2.0.x *can* decode gain-map AVIF directly
+  (`UHDR_ENABLE_HEIF`), which would collapse this whole chain into one command — but the option
+  needs a libheif patched for the ISO 21496-1 gain map API, which Homebrew's is not, so the bottle
+  silently omits it. Re-evaluate when that lands upstream.
+
+**Measured**, pair mode vs the same frames' Lightroom-authored gain-map JPEGs, comparing each
+file's decoded HDR rendition against the PQ AVIF (PQ domain, perceptually uniform):
+
+| Frame | this script | Lightroom | content peak |
+| ----- | ----------- | --------- | ------------ |
+| 1707×2560 | 42.9 dB, capacity 1.06 st | 38.8 dB, 1.44 st | 424 nits (1.06 st) |
+| 2560×1707 | 58.7 dB, capacity 1.71 st | 50.2 dB, 2.30 st | 663 nits (1.71 st) |
+| 2560×2560 | 53.2 dB, capacity 2.58 st | 49.0 dB, 2.30 st | 1212 nits (2.58 st) |
+
+`crs:HDRMaxValue` in the XMP is **not** the content's peak — it reads `+2.30` on all three, because
+it is the edit's headroom ceiling. Lightroom clamps its own `hdrCapacityMax` to it (visibly, on the
+2.58-stop frame); this script uses each master's measured peak instead.
 
 Placeholders: `scripts/make-placeholders.mjs` (run once, committed output) generates 3 shoots ×
 3–4 images each, portrait 4:5, 1600px long side, muted warm gradient + film-grain noise + big

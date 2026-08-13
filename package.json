@@ -7,9 +7,10 @@
     "node": ">=22.12.0"
   },
   "scripts": {
+    "convert-masters": "node scripts/convert-masters.mjs",
     "photo-meta": "node scripts/photo-meta.mjs",
     "og-images": "node scripts/og-images.mjs",
-    "generate": "npm run photo-meta && npm run og-images",
+    "generate": "npm run convert-masters && npm run photo-meta && npm run og-images",
     "predev": "npm run generate",
     "dev": "astro dev",
     "prebuild": "npm run generate",

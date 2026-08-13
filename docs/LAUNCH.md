@@ -92,12 +92,19 @@ site ships true HDR or quietly ships flat SDR. Read it before the first deploy w
 | Setting              | Value                                                                  |
 | -------------------- | ---------------------------------------------------------------------- |
 | Image format         | **JPEG**                                                               |
-| HDR                  | **HDR Output** checked, **Maximize Compatibility** checked — this pair is what writes the ISO 21496-1 gain map |
-| Quality              | **95**                                                                 |
+| HDR                  | **HDR Output** checked                                                 |
+| Quality              | **90–95**                                                              |
 | Resize to fit        | **Long edge 2560 px**                                                  |
 | Color space          | sRGB (Display P3 also fine)                                             |
 | Metadata             | keep                                                                    |
 | Rotation             | baked into the pixels — an HDR master relying on an EXIF orientation tag is refused by the build |
+
+**HDR Output + JPEG is the whole recipe.** Lightroom 9.5 writes the ISO 21496-1 gain map into that
+JPEG by itself — there is no "Maximize Compatibility" checkbox to find, and earlier drafts of this
+document calling for one were wrong (it is a Photoshop setting). Verified across 38 exports: MPF
+index with 2 images, ISO 21496-1 marker, `hdrgm:Version="1.0"` in the XMP, on every single one.
+Those JPEGs **are** the masters — copy them into the shoot folder as `<stem>.jpg` and nothing else
+has to happen.
 
 **Author the SDR preview sliders per image.** One file carries both renditions; the SDR preview is
 what Firefox, older Safari, and every SDR display will see. Left at the default it is an
@@ -109,6 +116,67 @@ Check every export before it goes into a shoot folder:
 node scripts/check-hdr.mjs ~/Desktop/portfolio-picks
 # GAIN MAP column must read HDR on every row; MPF 2 and ISO yes confirm it at the byte level
 ```
+
+### If the masters come out as AVIF
+
+Lightroom's HDR **AVIF** export behaves differently: it writes a single PQ rendition (CICP 12/16)
+with **no gain map**, and no export setting adds one. AVIF is also not the delivery format — sharp
+can only read a gain map out of a JPEG. So an AVIF master needs a second, SDR export of the same
+photographs to pair with, and `scripts/convert-masters.mjs` (first in `npm run generate`) computes
+the gain map from the two and writes the `.jpg` master.
+
+The second export: **same catalogue, same edits, same 2560px long edge**, JPEG, quality 90–95,
+sRGB or Display P3, rotation baked in. Same dimensions is not a nicety — a gain map is a per-pixel
+ratio, and the converter refuses a pair that disagrees rather than resampling.
+
+Name the halves so the converter can find them, and let it write the third file:
+
+```
+src/content/shoots/<slug>/001.avif      HDR master     gitignored
+src/content/shoots/<slug>/001.sdr.jpg   SDR master     gitignored
+src/content/shoots/<slug>/001.jpg       ← generated, and committed
+```
+
+```sh
+npm run generate                                       # pairs → 001.jpg
+node scripts/check-hdr.mjs src/content/shoots/<slug>   # every .jpg row must read HDR
+git add src/content/shoots/<slug>                      # picks up only the .jpg
+```
+
+The SDR master is copied into the output container byte-for-byte — measured base RMSE 0.0000, max
+|delta| 0 — so the photograph you graded is literally the one that ships. The converter never
+synthesises an SDR base by tone mapping, which is the one thing this pipeline never does.
+
+One-time setup on the machine that adds masters, and nowhere else:
+
+```sh
+brew install libavif libultrahdr
+```
+
+CI does not need either package: the converted `.jpg` masters are committed, and the script warns
+and skips rather than failing when the tools are absent.
+
+**`check-hdr` cannot read an AVIF's gain map** — sharp/libvips only parse gain maps in JPEG, so an
+AVIF master shows as `sdr` in the table no matter what it contains. That is a limitation of the
+checker, not a verdict on the file. The `.jpg` rows are the ones that matter; to inspect an AVIF
+directly, use libavif:
+
+```sh
+avifdec --info master.avif                      # Transfer Char. 16 = PQ, Gain map: Absent
+avifgainmaputil printmetadata master.avif       # errors when there is genuinely no gain map
+```
+
+Failure modes the converter reports by name:
+
+- **Half a pair.** An `.avif` whose `.sdr.jpg` has not been exported yet logs "awaiting SDR export"
+  and the run continues — the folder can fill up in batches. A `.sdr.jpg` with no `.avif` is a
+  note: an SDR export alone cannot become a gain-map JPEG (rename it to `<stem>.jpg` if you meant
+  to publish it as a plain SDR photograph).
+- **Size mismatch between the halves.** Hard error, naming both sizes. Re-export.
+- **Master wider than 8192px.** Homebrew's `libultrahdr` is compiled with an 8192×8192 ceiling, so
+  a full-resolution 61MP export (9504×6336) is rejected. Exporting at the documented 2560px long
+  edge avoids it entirely; the alternative is rebuilding libultrahdr from source with
+  `-DUHDR_MAX_DIMENSION=16384` and pointing `$ULTRAHDR_APP` at the binary.
 
 ### No transforming CDN or image service in front. Ever.
 

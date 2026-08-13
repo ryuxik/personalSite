@@ -140,13 +140,18 @@ export function formatCaption(shoot: Shoot): string {
   return `${credit} · ${formatMonthYear(date)}`;
 }
 
-/** Stream order: date desc, then featured desc, then slug for a stable tail. */
+/**
+ * Stream order: featured desc first — the stream is a curated sequence, not a
+ * chronology, and the opener is an editorial choice (featured: 100). Date desc
+ * breaks ties (and orders any future shoots added without a weight), slug last
+ * for a stable tail.
+ */
 function compareShoots(a: Shoot, b: Shoot): number {
-  const byDate = b.data.date.getTime() - a.data.date.getTime();
-  if (byDate !== 0) return byDate;
-
   const byFeatured = b.data.featured - a.data.featured;
   if (byFeatured !== 0) return byFeatured;
+
+  const byDate = b.data.date.getTime() - a.data.date.getTime();
+  if (byDate !== 0) return byDate;
 
   return a.id.localeCompare(b.id);
 }

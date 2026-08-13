@@ -42,7 +42,8 @@ npm run dev        # → http://localhost:4321
 | `npm run dev`        | Dev server. Runs `generate` first via `predev`.                          |
 | `npm run build`      | `astro check` (strict TS) then `astro build` → `dist/`. Must pass clean.  |
 | `npm run preview`    | Serve the built `dist/` locally.                                         |
-| `npm run generate`   | `photo-meta` then `og-images` — both prebuild steps, in order.           |
+| `npm run generate`   | `convert-masters` → `photo-meta` → `og-images` — the prebuild steps, in order. |
+| `npm run convert-masters` | Turns any HDR master in a shoot folder that is not already a gain-map JPEG into one. No-op (and silent) when there are none. Incremental. |
 | `npm run photo-meta` | Walks the shoots folders → `src/generated/photo-meta.json` (dimensions, HDR flag, ladder, thumbhash, average color, EXIF) **and** the `public/photos/` delivery ladder. Incremental. |
 | `npm run og-images`  | Composes 1200×630 social cards → `public/og/{home,sessions,information}.jpg`. Incremental. |
 
@@ -63,6 +64,19 @@ cp ~/exports/*.jpg src/content/shoots/my-shoot/      # 2. name them 001.jpg, 002
 $EDITOR src/content/shoots/my-shoot/index.md         # 3. frontmatter below
 npm run dev                                          # 4. metadata + OG card regenerate automatically
 ```
+
+Step 2 assumes the JPEGs already carry their gain maps, which is what Lightroom's HDR JPEG export
+writes — check with `check-hdr` before copying. If instead the HDR came out as **AVIF**, the shoot
+folder takes a *pair* per photograph and `npm run generate` builds the `.jpg` master from it:
+
+```
+001.avif      HDR master (Lightroom "HDR Output", AVIF)     gitignored
+001.sdr.jpg   the SDR master of the same photograph          gitignored
+001.jpg       ← written by convert-masters, and committed
+```
+
+See [Masters exported as AVIF](#masters-exported-as-avif). Either way it is the `.jpg` that is
+committed and the `.jpg` that the site builds from.
 
 `index.md`:
 
@@ -91,11 +105,18 @@ gets the SDR photograph you graded. Export from Lightroom Classic / Lightroom:
 | Setting              | Value                                                                  |
 | -------------------- | ---------------------------------------------------------------------- |
 | Image format         | **JPEG**                                                               |
-| HDR                  | **HDR Output** checked, **Maximize Compatibility** checked (this is what writes the gain map) |
-| Quality              | **95**                                                                 |
+| HDR                  | **HDR Output** checked                                                 |
+| Quality              | **90–95**                                                              |
 | Resize to fit        | **Long edge 2560 px**                                                  |
 | Color space          | sRGB (Display P3 is fine too; the gain map carries the HDR part)        |
 | Metadata             | keep — EXIF drives the optional camera line                             |
+
+**HDR Output + JPEG is the whole recipe.** Lightroom 9.5 writes the ISO 21496-1 gain map into that
+JPEG on its own; there is no "Maximize Compatibility" checkbox to find (that is a Photoshop
+setting, and older notes calling for it here were wrong). Verified on 38 exports: every one came
+out with an MPF index, a second image, and `hdrgm:Version="1.0"` in its XMP. **AVIF is the
+exception** — Lightroom's HDR AVIF export writes a bare PQ rendition with no gain map, which is why
+it needs a second SDR export to pair with (below).
 
 Author the **SDR preview sliders per image** (Lightroom's SDR tab under the HDR panel). That
 preview *is* what most of the internet sees; shipping the default is shipping an unreviewed
@@ -110,6 +131,57 @@ node scripts/check-hdr.mjs ~/exports          # GAIN MAP: PRESENT on every row
 ```
 
 SDR masters still work — they just get a plain JPEG + AVIF ladder through the same code path.
+
+### Masters exported as AVIF
+
+An AVIF master is not the delivery format — sharp can only read a gain map out of a JPEG — so
+`scripts/convert-masters.mjs` transcodes it, running at the head of the `generate` chain
+(`convert-masters → photo-meta → og-images`).
+
+Lightroom's HDR AVIF is a **single PQ rendition with no gain map**, so the SDR half has to come
+from a second export of the same photographs: same catalogue, same edits, **same 2560px long
+edge**, JPEG quality 90–95, sRGB or Display P3. Copy both halves in, naming the SDR one
+`<stem>.sdr.jpg`:
+
+```sh
+cp ~/exports/hdr/001.avif    src/content/shoots/my-shoot/001.avif
+cp ~/exports/sdr/001.jpg     src/content/shoots/my-shoot/001.sdr.jpg
+npm run generate                                     # each pair becomes the 001.jpg master
+node scripts/check-hdr.mjs src/content/shoots/my-shoot   # GAIN MAP: PRESENT on every .jpg
+git add src/content/shoots/my-shoot                  # commits the .jpg; both masters are gitignored
+```
+
+`convert-masters` computes the gain map from the two intents — a gain map *is* the per-pixel ratio
+between an SDR rendition and an HDR one — and copies the SDR JPEG into the output container
+byte-for-byte. Measured base RMSE 0.0000, max |delta| 0, on every frame tested: what you graded is
+literally what ships, never a tone map of the HDR.
+
+The halves must match in size; a mismatch is a hard error naming both. An `.avif` whose
+`.sdr.jpg` has not been exported yet is *not* an error — the run says "awaiting SDR export" and
+carries on, so a folder can fill up in batches. A gain-map AVIF (should Lightroom ever write one)
+is still handled the old way, from the one file, and needs no SDR half.
+
+It needs two Homebrew packages, once, on the machine that adds the masters:
+
+```sh
+brew install libavif libultrahdr
+```
+
+Without them the script warns and skips instead of failing, which is deliberate: the converted
+`.jpg` masters are committed, so CI and any other machine build fine with neither installed.
+
+Two things that will bite on a first real export:
+
+- **Export at the documented 2560px long edge.** The Homebrew `libultrahdr` is built with an
+  8192×8192 ceiling, so a full-resolution 61MP export (9504×6336) is refused. The script prints the
+  fix — rebuild libultrahdr with `-DUHDR_MAX_DIMENSION=16384` and point `$ULTRAHDR_APP` at it — but
+  resizing on export is the easier answer and is what the spec asks for anyway.
+- **Export both halves at the same size, from the same edits.** The gain map is a per-pixel ratio;
+  two different rasters cannot produce one. The script refuses the pair rather than resampling, and
+  it will never invent an SDR base by tone mapping the HDR — that is the one rule of this pipeline.
+- **`check-hdr` cannot read an AVIF's gain map** and shows every `.avif` as `sdr`. That is a
+  limitation of the checker (libvips only parses gain maps in JPEG), not a verdict on the file. The
+  rows that matter are the `.jpg` ones.
 
 Stream order is **date descending, then `featured` descending**. Captions render as
 `{subject} for {client} · Mon 'YY`. The schema lives in `src/content.config.ts`; a bad
@@ -161,7 +233,7 @@ src/
   lib/            typed helpers over the collection + generated metadata
   pages/          index, sessions, information, 404, image-sitemap.xml.ts
   styles/         global.css — tokens first, then everything else
-scripts/          photo-meta.mjs, og-images.mjs, make-placeholders.mjs, check-hdr.mjs
+scripts/          convert-masters.mjs, photo-meta.mjs, og-images.mjs, make-placeholders.mjs, check-hdr.mjs
 docs/             LAUNCH.md, dns-snapshot-2026-08-12.txt
 public/           favicon, robots.txt, og/ (generated), photos/ (generated ladder)
 ```
