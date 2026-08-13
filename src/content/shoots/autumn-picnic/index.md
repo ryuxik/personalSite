@@ -1,6 +1,6 @@
 ---
 title: "Autumn picnic"
-subject: "Danqi"
+subject: "for DQ"
 context: personal
 date: 2025-10-25
 location: "New York, NY"

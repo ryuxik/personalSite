@@ -1,6 +1,6 @@
 ---
 title: "Brooklyn nights"
-subject: "Danqi"
+subject: "for DQ"
 context: personal
 date: 2025-11-08
 location: "Brooklyn, NY"

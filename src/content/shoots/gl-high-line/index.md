@@ -1,10 +1,10 @@
 ---
-title: "Vishaal"
-subject: "Vishaal"
+title: "GL, the High Line"
+subject: "for GL"
 context: commissioned
-date: 2026-03-25
+date: 2023-11-11
 location: "New York, NY"
 genre: portraiture
 cover: ./001.jpg
-featured: 98
+featured: 96
 ---
