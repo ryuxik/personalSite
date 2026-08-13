@@ -3,10 +3,10 @@
  * Sessions — the working page. Owned by Agent C (SPEC.md § Sessions page).
  *
  * Order, per spec: 1 intro · 2 track cards · 3 investment tiers · 4 booking
- * embeds (with 5 testimonials sat above each) · 6 FAQ · 7 prep · 8 enquiry.
+ * embeds (with 5 testimonials sat above each) · 6 FAQ · 7 enquiry.
  *
  * Stable anchors for Agent D's JSON-LD / any deep links:
- *   #consult  #book  #investment  #faq  #prep  #inquire
+ *   #consult  #book  #investment  #faq  #inquire
  *
  * Smooth in-page scrolling comes from `html { scroll-behavior: smooth }` in
  * global.css, which already disables itself under prefers-reduced-motion.
@@ -77,15 +77,6 @@ const TIERS: Tier[] = [
   },
 ];
 
-/* TODO(ryu): tune this list once the real session flow settles. */
-const PREP: string[] = [
-  'Bring two or three outfit options on hangers. Solid colours and simple necklines read best; loud patterns and visible logos date fast.',
-  'Book haircuts and colour at least a week out — never the day before.',
-  'Sleep, water and a real meal beforehand do more for a portrait than any amount of retouching.',
-  'Skip new skincare, self-tanner or anything experimental in the week before.',
-  'Send me three reference images you like. Three is enough to align the entire session.',
-  'Arrive ten minutes early. Parking and finding the right door always take longer than you think.',
-];
 ---
 
 <BaseLayout>
@@ -286,20 +277,11 @@ const PREP: string[] = [
         <p>
           Solid colours and simple shapes photograph best; busy patterns and a haircut from the day
           before are the two most common regrets. Bring two or three options on hangers and
-          we&rsquo;ll choose together on the day. The full list is in
-          <a href="#prep">Before your session</a> below.
+          we&rsquo;ll choose together on the day — the full prep list arrives with your booking
+          confirmation.
         </p>
       </Faq>
     </div>
-  </section>
-
-  {/* 7. Prep guide ------------------------------------------------------- */}
-  <section class="column section section--ruled" id="prep" aria-labelledby="prep-heading">
-    <span class="eyebrow">Prep</span>
-    <h2 id="prep-heading">Before your session</h2>
-    <ul class="prep" role="list">
-      {PREP.map((item) => <li class="prep__item">{item}</li>)}
-    </ul>
   </section>
 
   {/* 8. Enquiry ---------------------------------------------------------- */}
@@ -431,35 +413,6 @@ const PREP: string[] = [
     margin-top: var(--space-5);
   }
 
-  /* --- 7. Prep ----------------------------------------------------------- */
-
-  .prep {
-    list-style: none;
-    margin: var(--space-5) 0 0;
-    padding: 0;
-  }
-
-  .prep__item {
-    max-width: var(--measure);
-    padding: var(--space-4) 0 var(--space-4) var(--space-5);
-    border-top: 1px solid var(--line);
-    color: var(--ink-soft);
-    position: relative;
-  }
-
-  .prep__item:last-child {
-    border-bottom: 1px solid var(--line);
-  }
-
-  .prep__item::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: calc(var(--space-4) + 0.62em);
-    width: 8px;
-    height: 1px;
-    background-color: var(--ink-faint);
-  }
 
   /* --- responsive -------------------------------------------------------- */
 
