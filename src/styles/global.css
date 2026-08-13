@@ -623,3 +623,20 @@ figcaption {
 /* --- 9. Agent append zone ----------------------------------------------- */
 /* Agents B / C / D: append new classes below under your own comment header.
    Do not edit rules above this line — note blockers in your report instead. */
+
+/* --- Agent B: HDR stream -------------------------------------------------
+ * `.fade-up` above sets `will-change: opacity, transform` unconditionally, which
+ * promotes every frame to its own compositing layer whether or not the reveal is
+ * ever armed. On an HDR-capable display index.astro deliberately never arms it
+ * (Safari 26.0–26.3 silently drops an HDR <img> to SDR when opacity/transform/
+ * transitions touch the image or any ancestor), so there the hint is pure risk —
+ * and ~90 idle layers — for an animation that will not run. Hint only once
+ * .fade-up-ready says it is going to. Appended, not edited, per the rule above.
+ */
+.fade-up {
+  will-change: auto;
+}
+
+.fade-up-ready .fade-up {
+  will-change: opacity, transform;
+}

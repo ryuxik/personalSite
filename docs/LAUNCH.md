@@ -82,6 +82,73 @@ Either way, keep the honeypot field and the "I reply within 24 hours" line hones
 
 ---
 
+## Photos — HDR masters, and how they must be served
+
+Unnumbered on purpose: this one is not a step, it is a set of constraints that decide whether the
+site ships true HDR or quietly ships flat SDR. Read it before the first deploy with real work.
+
+### Export spec (Lightroom Classic / Lightroom)
+
+| Setting              | Value                                                                  |
+| -------------------- | ---------------------------------------------------------------------- |
+| Image format         | **JPEG**                                                               |
+| HDR                  | **HDR Output** checked, **Maximize Compatibility** checked — this pair is what writes the ISO 21496-1 gain map |
+| Quality              | **95**                                                                 |
+| Resize to fit        | **Long edge 2560 px**                                                  |
+| Color space          | sRGB (Display P3 also fine)                                             |
+| Metadata             | keep                                                                    |
+| Rotation             | baked into the pixels — an HDR master relying on an EXIF orientation tag is refused by the build |
+
+**Author the SDR preview sliders per image.** One file carries both renditions; the SDR preview is
+what Firefox, older Safari, and every SDR display will see. Left at the default it is an
+unreviewed photograph with your name on it.
+
+Check every export before it goes into a shoot folder:
+
+```sh
+node scripts/check-hdr.mjs ~/Desktop/portfolio-picks
+# GAIN MAP column must read HDR on every row; MPF 2 and ISO yes confirm it at the byte level
+```
+
+### No transforming CDN or image service in front. Ever.
+
+`public/photos/` must be served **byte-for-byte as static files**. Cloudflare Polish, Mirage,
+Image Resizing / Images, any "automatic image optimization" toggle, and every third-party image
+CDN re-encode what they proxy — and re-encoding drops the gain map. The photographs stay valid and
+still look fine, which is exactly why this fails silently: nothing errors, the HDR just quietly
+stops happening.
+
+- Cloudflare dashboard → **Speed → Optimization → Image Optimization**: Polish **off**, Mirage
+  **off**. (Both are off by default on the Free plan — confirm rather than assume.)
+- Do not put the site behind an image proxy, and do not enable Images transformations on this zone.
+- Re-verify after any dashboard change: `curl -sI https://ryuxik.io/photos/<slug>/<file>-2048.jpg`
+  should return `content-type: image/jpeg` and **no** `cf-polished` header. Then download it and
+  run `node scripts/check-hdr.mjs` on the downloaded copy — that is the only test that proves the
+  bytes survived the wire.
+
+### Build time — the AVIF ladder is the slow part
+
+Every image is encoded 3 widths × 2 formats, and AVIF is roughly ten times slower than JPEG. The
+generator prints a per-image line and a total (`jpeg …s, avif …s`) so this stays measurable. With
+11 placeholder images it is a few seconds; with ~90 real 2560px masters expect the first cold build
+to run into **many minutes**, and Cloudflare's build container is slower than a laptop and has a
+build-time limit. The cache is keyed on mtime + size, and `public/photos/` is gitignored, so **a CI
+build is always a cold build** — it re-encodes everything, every time.
+
+If that becomes painful, the supported alternative is to build locally and deploy the output
+directly:
+
+```sh
+npm run build
+npx wrangler pages deploy dist --project-name=<your-pages-project>
+```
+
+Same artifact, no build container, and the incremental cache on your machine means only new
+photographs are ever encoded. The trade is that deploys are no longer automatic on `git push` —
+so decide deliberately, and keep the Git integration connected either way for preview builds.
+
+---
+
 ## 3. Cloudflare Pages — connect the repo
 
 1. Merge `revamp` into the production branch and push.
@@ -99,9 +166,10 @@ Either way, keep the honeypot field and the "I reply within 24 hours" line hones
    declares `engines.node >= 22.19`; on a build image with an older default Node the install
    fails or — worse — warns and then breaks at runtime. Pin it explicitly.
 5. **Save and Deploy.** Watch the log: `npm run build` runs `astro check` (strict TS) before
-   `astro build`, and the `prebuild` hook regenerates photo metadata and the OG cards. Both
-   generated directories are gitignored, so this must succeed on a clean checkout — if it
-   doesn't, the failure is real, not environmental.
+   `astro build`, and the `prebuild` hook regenerates the photo metadata, the whole
+   `public/photos/` HDR ladder, and the OG cards. All three generated directories are gitignored,
+   so this must succeed on a clean checkout — if it doesn't, the failure is real, not
+   environmental. Expect the photo step to dominate the build time; see § Photos.
 6. Open the `*.pages.dev` URL and click through all four pages **before** touching DNS.
 
 ---
@@ -153,8 +221,12 @@ Google has crawled it.
 - [ ] All four pages render: `/`, `/sessions`, `/information`, and a bogus path → the 404 page
       (wordmark, "Nothing here.", `→ Overview`, and `<meta name="robots" content="noindex, follow">`).
 - [ ] `/robots.txt`, `/sitemap-index.xml`, `/image-sitemap.xml` each return 200. The image
-      sitemap's `<image:loc>` values are `/_astro/…` fingerprinted URLs — open one and confirm it
-      is a real image, not a 404.
+      sitemap's `<image:loc>` values are stable `/photos/<slug>/<file>-<w>.jpg` URLs — open one and
+      confirm it is a real image, not a 404.
+- [ ] HDR survived the wire: download one `/photos/…` JPEG from the live site and run
+      `node scripts/check-hdr.mjs` on it. `GAIN MAP: PRESENT` means the CDN is not transforming
+      images (see § Photos). Then open `/` in Chrome 137+ or Safari 26+ on an HDR display — the
+      photographs should visibly gain highlight range over what Firefox shows.
 - [ ] `/og/home.jpg`, `/og/sessions.jpg`, `/og/information.jpg` are 1200×630 and show the
       wordmark. Paste a page URL into [opengraph.xyz](https://www.opengraph.xyz) and check the
       unfurl; then paste it into Slack and iMessage, which cache aggressively — get it right
@@ -170,8 +242,9 @@ Google has crawled it.
 - [ ] Book a real test slot on each event type. Confirm the calendar invite, the confirmation
       email, and — for `headshots` — the Stripe charge. Refund it and cancel the booking.
 - [ ] If the inquiry form is live: submit it once and confirm the message arrives.
-- [ ] Lighthouse mobile on `/`: LCP under 2.5s, CLS near zero. The first stream image must be
-      `priority` (never lazy) — check the network waterfall.
+- [ ] Lighthouse mobile on `/`: LCP under 2.5s, CLS near zero. Exactly one image on the page is
+      `loading="eager" fetchpriority="high" decoding="sync"` — the first frame, never lazy. Check
+      the network waterfall.
 - [ ] Google Search Console → add `ryuxik.io` as a **domain property** (DNS TXT verification,
       now trivial since Cloudflare holds the zone) → submit **both** sitemaps.
 - [ ] Optional: same in Bing Webmaster Tools, which will import from Search Console.

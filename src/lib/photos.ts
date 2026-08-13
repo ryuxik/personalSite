@@ -1,19 +1,21 @@
 /**
  * src/lib/photos.ts — the one place the Overview stream is assembled.
  *
- * Joins three sources:
+ * Joins two sources:
  *   1. the `shoots` content collection (frontmatter, see src/content.config.ts)
- *   2. the images sitting next to each index.md, imported through
- *      `import.meta.glob` so astro:assets can optimise them
- *   3. src/generated/photo-meta.json, written by scripts/photo-meta.mjs
- *      (dimensions, thumbhash, average colour, EXIF)
+ *   2. src/generated/photo-meta.json, written by scripts/photo-meta.mjs
+ *      (dimensions, HDR flag, delivery ladder, thumbhash, average colour, EXIF)
  *
- * Every meta lookup degrades gracefully: if photo-meta.json is empty — a fresh
- * clone before `npm run generate`, say — dimensions fall back to the intrinsic
- * values astro:assets already knows and the thumbhash is simply absent.
+ * NOTE — no astro:assets here, on purpose. The masters are HDR gain-map JPEGs
+ * and getImage()/<Picture> strip the gain map, so every stream frame is served
+ * from the static ladder in public/photos/ that photo-meta.mjs pre-generates.
+ * That makes photo-meta.json the source of truth for *which* images exist: an
+ * image with no ladder cannot be rendered, so it is not part of the stream.
+ *
+ * Consequence: `npm run photo-meta` (which `predev`/`prebuild` run for you) must
+ * have run at least once, or the stream is empty rather than broken.
  */
 import { getCollection, type CollectionEntry } from 'astro:content';
-import type { ImageMetadata } from 'astro';
 import photoMetaFile from '../generated/photo-meta.json';
 
 export type Shoot = CollectionEntry<'shoots'>;
@@ -27,9 +29,24 @@ export interface PhotoExif {
   iso?: number;
 }
 
+/** One rung of the delivery ladder. Paths are site-absolute public URLs. */
+export interface PhotoRung {
+  /** Rendered pixel width — the `w` descriptor in the srcset. */
+  w: number;
+  h: number;
+  /** HDR gain-map JPEG for an HDR master; a plain JPEG for an SDR one. */
+  jpg: string;
+  /** SDR AVIF, for displays and browsers that get the SDR rendition anyway. */
+  avif: string;
+}
+
 export interface PhotoMeta {
   width: number;
   height: number;
+  /** Master carries an ISO 21496-1 gain map, so the jpg rungs are HDR. */
+  isHDR: boolean;
+  /** Ascending by width; never empty for an image that made it into the file. */
+  ladder: PhotoRung[];
   /** Average colour, "#rrggbb" — the background under the thumbhash. */
   color: string;
   /** base64 PNG data-URI, painted as a CSS background while the file loads. */
@@ -51,16 +68,17 @@ interface PhotoMetaFile {
  */
 const META: Record<string, PhotoMeta> = (photoMetaFile as unknown as PhotoMetaFile).photos ?? {};
 
-/** One frame in the stream: the optimisable source plus its sidecar metadata. */
+/** One frame in the stream: the ladder plus its sidecar metadata. */
 export interface StreamImage {
   /** "<slug>/<file>", e.g. "oaxaca-portraits/001.jpg" — the photo-meta key. */
   key: string;
   /** Bare filename; filename order is display order. */
   file: string;
-  /** Pass straight to <Image>/<Picture> `src`. */
-  src: ImageMetadata;
+  /** Intrinsic size of the master — drives the aspect-ratio box. */
   width: number;
   height: number;
+  isHDR: boolean;
+  ladder: PhotoRung[];
   color: string;
   thumbhash?: string;
   exif?: PhotoExif;
@@ -75,38 +93,26 @@ export interface StreamEntry {
   caption: string;
 }
 
-const SHOOTS_ROOT = '/src/content/shoots/';
+/** slug -> ["001.jpg", "002.jpg", …] in filename order, from the generated meta. */
+const FILES_BY_SLUG: Map<string, string[]> = (() => {
+  const map = new Map<string, string[]>();
 
-/**
- * Eager glob so the whole stream is resolvable synchronously at build time.
- * The pattern must stay a literal — Vite reads it statically.
- */
-const IMAGE_MODULES = import.meta.glob<{ default: ImageMetadata }>(
-  '/src/content/shoots/*/*.{jpg,jpeg,png,JPG,JPEG,PNG}',
-  { eager: true },
-);
-
-/** slug -> [{ file, src }, …] in filename order. */
-const IMAGES_BY_SLUG: Map<string, { file: string; src: ImageMetadata }[]> = (() => {
-  const map = new Map<string, { file: string; src: ImageMetadata }[]>();
-
-  for (const [path, mod] of Object.entries(IMAGE_MODULES)) {
-    const relative = path.startsWith(SHOOTS_ROOT) ? path.slice(SHOOTS_ROOT.length) : path;
-    const slash = relative.indexOf('/');
+  for (const key of Object.keys(META)) {
+    const slash = key.indexOf('/');
     if (slash < 0) continue;
 
-    const slug = relative.slice(0, slash);
-    const file = relative.slice(slash + 1);
+    const slug = key.slice(0, slash);
+    const file = key.slice(slash + 1);
     // Only direct children — no nested folders of outtakes.
     if (file.includes('/')) continue;
 
     const list = map.get(slug);
-    if (list) list.push({ file, src: mod.default });
-    else map.set(slug, [{ file, src: mod.default }]);
+    if (list) list.push(file);
+    else map.set(slug, [file]);
   }
 
   for (const list of map.values()) {
-    list.sort((a, b) => a.file.localeCompare(b.file, 'en', { numeric: true }));
+    list.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
   }
 
   return map;
@@ -163,31 +169,59 @@ function altFor(shoot: Shoot, index: number, total: number): string {
   return `${subject} — ${title}${where}${frame}`;
 }
 
-/** A shoot's images in filename order, joined with their generated metadata. */
+/**
+ * The rung a plain <img src> should point at: the largest one at or below
+ * `target`, so the no-srcset fallback is a sensible middle size rather than the
+ * 2048 master. Falls back to the smallest rung for a very small image.
+ */
+export function fallbackRung(ladder: PhotoRung[], target = 1400): PhotoRung | undefined {
+  if (ladder.length === 0) return undefined;
+  const under = ladder.filter((rung) => rung.w <= target);
+  return under.length > 0 ? under[under.length - 1] : ladder[0];
+}
+
+/** `srcset` for one format of a ladder: "/photos/a/001-900.jpg 900w, …". */
+export function srcsetFor(ladder: PhotoRung[], format: 'jpg' | 'avif'): string {
+  return ladder.map((rung) => `${rung[format]} ${rung.w}w`).join(', ');
+}
+
+/**
+ * A shoot's images in filename order, joined with their generated metadata.
+ * Images without a usable ladder are dropped: there is nothing to render.
+ */
 export function getShootImages(shoot: Shoot): StreamImage[] {
-  const files = IMAGES_BY_SLUG.get(shoot.id) ?? [];
+  const files = FILES_BY_SLUG.get(shoot.id) ?? [];
 
-  return files.map(({ file, src }, index) => {
-    const key = `${shoot.id}/${file}`;
-    const meta = META[key];
+  return files
+    .map((file, index): StreamImage | undefined => {
+      const key = `${shoot.id}/${file}`;
+      const meta = META[key];
+      if (!meta || !Array.isArray(meta.ladder) || meta.ladder.length === 0) return undefined;
 
-    return {
-      key,
-      file,
-      src,
-      width: meta?.width ?? src.width,
-      height: meta?.height ?? src.height,
-      color: meta?.color ?? 'transparent',
-      thumbhash: meta?.thumbhash,
-      exif: meta?.exif,
-      alt: altFor(shoot, index, files.length),
-    };
-  });
+      return {
+        key,
+        file,
+        width: meta.width,
+        height: meta.height,
+        isHDR: meta.isHDR === true,
+        ladder: meta.ladder,
+        color: meta.color ?? 'transparent',
+        thumbhash: meta.thumbhash,
+        exif: meta.exif,
+        alt: altFor(shoot, index, files.length),
+      };
+    })
+    .filter((image): image is StreamImage => image !== undefined);
 }
 
 /** Sidecar metadata for one image, by "<slug>/<file>" key. */
 export function getPhotoMeta(key: string): PhotoMeta | undefined {
   return META[key];
+}
+
+/** Every "<slug>/<file>" key the generator knows about, in filename order. */
+export function getPhotoKeys(slug: string): string[] {
+  return (FILES_BY_SLUG.get(slug) ?? []).map((file) => `${slug}/${file}`);
 }
 
 /**

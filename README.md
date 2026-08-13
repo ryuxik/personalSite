@@ -18,7 +18,7 @@ Replaces the 2018 Angular app that used to live here. The full build contract is
 | Framework  | [Astro 7](https://astro.build), `output: 'static'` — zero framework runtime    |
 | Styling    | One global stylesheet + scoped component styles. No Tailwind.                  |
 | Type       | Self-hosted `@fontsource-variable/newsreader` + `archivo`. No font CDN.        |
-| Images     | `astro:assets` (AVIF + WebP, widths 480/800/1200/1600)                         |
+| Images     | **True HDR** gain-map JPEG + SDR AVIF ladder, pre-encoded to `public/photos/`  |
 | Content    | Astro content collections — a `shoots` collection of folders on disk           |
 | Booking    | Cal.com inline embed, lazy-injected on scroll                                  |
 | Hosting    | Cloudflare Pages (static)                                                      |
@@ -43,11 +43,15 @@ npm run dev        # → http://localhost:4321
 | `npm run build`      | `astro check` (strict TS) then `astro build` → `dist/`. Must pass clean.  |
 | `npm run preview`    | Serve the built `dist/` locally.                                         |
 | `npm run generate`   | `photo-meta` then `og-images` — both prebuild steps, in order.           |
-| `npm run photo-meta` | Walks the shoots folders → `src/generated/photo-meta.json` (dimensions, thumbhash, average color, EXIF). Incremental. |
+| `npm run photo-meta` | Walks the shoots folders → `src/generated/photo-meta.json` (dimensions, HDR flag, ladder, thumbhash, average color, EXIF) **and** the `public/photos/` delivery ladder. Incremental. |
 | `npm run og-images`  | Composes 1200×630 social cards → `public/og/{home,sessions,information}.jpg`. Incremental. |
 
-Both generated directories (`src/generated/`, `public/og/`) are gitignored and rebuilt from
-source on every install — never edit them by hand.
+`node scripts/check-hdr.mjs <file\|dir>` is a one-off inspector, not part of the build: it reports
+whether a JPEG really carries a gain map (sharp metadata plus a byte-level MPF/ISO 21496-1 scan).
+Run it on a fresh Lightroom export before dropping it into a shoot folder.
+
+All three generated directories (`src/generated/`, `public/og/`, `public/photos/`) are gitignored
+and rebuilt from source — never edit them by hand.
 
 ## Add a shoot
 
@@ -77,6 +81,35 @@ featured: 10                   # sort weight within the same date; default 0
 ```
 
 The body is optional — one or two sentences at most, usually empty.
+
+### Export the masters as HDR
+
+The site delivers **true HDR**. The masters must be gain-map JPEGs (ISO 21496-1) — one file that
+carries an authored SDR image *and* the HDR gain map, so HDR displays get HDR and everything else
+gets the SDR photograph you graded. Export from Lightroom Classic / Lightroom:
+
+| Setting              | Value                                                                  |
+| -------------------- | ---------------------------------------------------------------------- |
+| Image format         | **JPEG**                                                               |
+| HDR                  | **HDR Output** checked, **Maximize Compatibility** checked (this is what writes the gain map) |
+| Quality              | **95**                                                                 |
+| Resize to fit        | **Long edge 2560 px**                                                  |
+| Color space          | sRGB (Display P3 is fine too; the gain map carries the HDR part)        |
+| Metadata             | keep — EXIF drives the optional camera line                             |
+
+Author the **SDR preview sliders per image** (Lightroom's SDR tab under the HDR panel). That
+preview *is* what most of the internet sees; shipping the default is shipping an unreviewed
+photograph. Export with the rotation baked in — an HDR master that still relies on an EXIF
+orientation tag is refused by the generator, because gain maps and rotation cannot be combined in
+one sharp pass.
+
+Verify before committing:
+
+```sh
+node scripts/check-hdr.mjs ~/exports          # GAIN MAP: PRESENT on every row
+```
+
+SDR masters still work — they just get a plain JPEG + AVIF ladder through the same code path.
 
 Stream order is **date descending, then `featured` descending**. Captions render as
 `{subject} for {client} · Mon 'YY`. The schema lives in `src/content.config.ts`; a bad
@@ -128,9 +161,9 @@ src/
   lib/            typed helpers over the collection + generated metadata
   pages/          index, sessions, information, 404, image-sitemap.xml.ts
   styles/         global.css — tokens first, then everything else
-scripts/          photo-meta.mjs, og-images.mjs, make-placeholders.mjs
+scripts/          photo-meta.mjs, og-images.mjs, make-placeholders.mjs, check-hdr.mjs
 docs/             LAUNCH.md, dns-snapshot-2026-08-12.txt
-public/           favicon, robots.txt, og/ (generated)
+public/           favicon, robots.txt, og/ (generated), photos/ (generated ladder)
 ```
 
 ## Deploy

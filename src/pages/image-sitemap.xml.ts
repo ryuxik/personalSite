@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
-import { getImage } from 'astro:assets';
 import { getCollection } from 'astro:content';
+import { getPhotoKeys, getPhotoMeta } from '../lib/photos';
 import { SITE } from '../config';
 
 /**
@@ -9,21 +9,22 @@ import { SITE } from '../config';
  * Complements @astrojs/sitemap (which emits /sitemap-index.xml for pages only).
  * Both are advertised in public/robots.txt.
  *
- * WHY getImage() AND NOT A HAND-WRITTEN PATH
- * ------------------------------------------
- * astro:assets fingerprints every derivative (/_astro/001.CxK3p_1600.webp), so the
- * final URL is not knowable from source. Chasing it with string templates would rot
- * the first time a file changes. getImage() runs inside the endpoint at build time and
- * returns the same URL the build actually emits, so the sitemap can never point at a
- * 404. It also *creates* the derivative, which means every URL here is guaranteed to
- * exist in dist/ even if no page happens to render that exact variant.
+ * WHY THE LADDER URLS AND NOT getImage()
+ * --------------------------------------
+ * This used to call getImage() and list the fingerprinted /_astro/… derivative, because
+ * that URL was not knowable from source. It no longer applies: the stream bypasses
+ * astro:assets entirely (gain maps do not survive it — SPEC.md § HDR pipeline) and is
+ * served from the static ladder scripts/photo-meta.mjs writes into public/photos/. Those
+ * paths are stable across builds, which is what an image sitemap wants — a fingerprinted
+ * URL changes on every re-encode and throws away whatever crawl history it had.
  *
  * WHICH IMAGES
  * ------------
- * Every image in every shoot folder — the whole stream, not just covers — discovered
- * with import.meta.glob rather than through src/lib/photos.ts, so this endpoint has no
- * build-order dependency on Agent B's helpers and degrades to "no images" instead of
- * failing when the collection is empty or mid-write.
+ * Every image in every shoot folder — the whole stream, not just covers — at its widest
+ * rung (the JPEG, since that is the canonical rendition; the AVIF is a same-image
+ * alternative and listing both would be duplicate entries). Discovered through the
+ * generated photo metadata, which is the same source the stream renders from, so the
+ * sitemap can never point at a file the build did not emit.
  *
  * OG cards (public/og/*.jpg) are deliberately NOT listed. An image sitemap describes
  * images that appear *on* the page; the OG cards never render in the document, they are
@@ -38,40 +39,6 @@ export const prerender = true;
 
 /** Site-relative page URLs, trailing slash to match what @astrojs/sitemap emits. */
 const PAGES = ['/', '/sessions/', '/information/'] as const;
-
-/**
- * Widest step of the configured breakpoints. Clamped to each image's intrinsic width at use
- * so a portrait frame is never upscaled into a bigger, worse file just for the sitemap —
- * and so the requested transform is more likely to be one the page already emitted.
- */
-const SITEMAP_IMAGE_WIDTH = 1600;
-
-type ShootImage = { file: string; image: ImageMetadata };
-
-const imageModules = import.meta.glob<{ default: ImageMetadata }>(
-  '../content/shoots/*/*.{jpg,jpeg,JPG,JPEG,png,PNG,webp,avif}',
-  { eager: true },
-);
-
-/** Group globbed files by shoot slug; filename order is display order (SPEC § Content model). */
-function groupBySlug(): Map<string, ShootImage[]> {
-  const bySlug = new Map<string, ShootImage[]>();
-
-  for (const [path, mod] of Object.entries(imageModules)) {
-    const match = path.match(/\/shoots\/([^/]+)\/([^/]+)$/);
-    if (!match) continue;
-    const [, slug, file] = match;
-    const list = bySlug.get(slug) ?? [];
-    list.push({ file, image: mod.default });
-    bySlug.set(slug, list);
-  }
-
-  for (const list of bySlug.values()) {
-    list.sort((a, b) => a.file.localeCompare(b.file, 'en', { numeric: true }));
-  }
-
-  return bySlug;
-}
 
 /** "{subject} for {client} · Mar '26" — the stream caption, verbatim. */
 function caption(data: { subject: string; client?: string; date: Date }): string {
@@ -107,21 +74,19 @@ async function streamImages(): Promise<{ loc: string; title: string }[]> {
       a.id.localeCompare(b.id),
   );
 
-  const bySlug = groupBySlug();
   const entries: { loc: string; title: string }[] = [];
 
   for (const shoot of ordered) {
     const title = caption(shoot.data);
-    const files = bySlug.get(shoot.id) ?? [{ file: 'cover', image: shoot.data.cover }];
 
-    for (const { image } of files) {
-      try {
-        const width = Math.min(SITEMAP_IMAGE_WIDTH, image.width || SITEMAP_IMAGE_WIDTH);
-        const built = await getImage({ src: image, width, format: 'webp' });
-        entries.push({ loc: absolute(built.src), title });
-      } catch (error) {
-        console.warn('[image-sitemap] skipped an image —', (error as Error)?.message ?? error);
+    for (const key of getPhotoKeys(shoot.id)) {
+      // Widest rung: the largest rendition that actually exists for this master.
+      const widest = getPhotoMeta(key)?.ladder?.at(-1);
+      if (!widest) {
+        console.warn('[image-sitemap] no ladder for', key, '— run `npm run photo-meta`');
+        continue;
       }
+      entries.push({ loc: absolute(widest.jpg), title });
     }
   }
 

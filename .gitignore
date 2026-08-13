@@ -8,6 +8,8 @@ dist/
 # generated at predev/prebuild time by scripts/photo-meta.mjs + scripts/og-images.mjs
 src/generated/
 public/og/
+# the HDR/SDR delivery ladder — re-encoded from the masters by photo-meta.mjs
+public/photos/
 
 # env
 .env

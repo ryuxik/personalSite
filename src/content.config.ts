@@ -10,18 +10,20 @@ import { z } from 'astro/zod';
  */
 const shoots = defineCollection({
   loader: glob({ pattern: '*/index.md', base: './src/content/shoots' }),
-  schema: ({ image }) =>
-    z.object({
-      title: z.string(),
-      subject: z.string(),
-      context: z.enum(['commissioned', 'personal']),
-      client: z.string().optional(),
-      date: z.coerce.date(),
-      location: z.string().optional(),
-      genre: z.enum(['portraiture', 'street', 'landscape', 'events', 'other']),
-      cover: image(),
-      featured: z.number().default(0),
-    }),
+  // `cover` is a plain relative path, NOT the image() schema: stream images bypass
+  // astro:assets (HDR gain maps — see SPEC.md § HDR pipeline), and image() made Astro
+  // emit an unreferenced full-size copy of every cover into dist/_astro/.
+  schema: z.object({
+    title: z.string(),
+    subject: z.string(),
+    context: z.enum(['commissioned', 'personal']),
+    client: z.string().optional(),
+    date: z.coerce.date(),
+    location: z.string().optional(),
+    genre: z.enum(['portraiture', 'street', 'landscape', 'events', 'other']),
+    cover: z.string(),
+    featured: z.number().default(0),
+  }),
 });
 
 export const collections = { shoots };

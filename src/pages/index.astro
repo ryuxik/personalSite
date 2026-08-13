@@ -38,6 +38,9 @@ const stream = await getStream();
       var root = document.documentElement;
       if (!('IntersectionObserver' in window)) return;
       if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      // Safari 26.0–26.3 silently drops an HDR <img> to SDR when opacity/transform/
+      // transitions apply to it or any ancestor — so on HDR displays, no fade at all.
+      if (window.matchMedia && window.matchMedia('(dynamic-range: high)').matches) return;
 
       root.classList.add('fade-up-ready');
 

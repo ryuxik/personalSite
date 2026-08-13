@@ -21,8 +21,11 @@ down. Static Astro 7 site deployed to Cloudflare Pages. Running cost target: $0/
   Fonts self-hosted via `@fontsource-variable/newsreader` and `@fontsource-variable/archivo`.
 - Single theme: warm paper light. NO dark mode (deliberate — none of the top-tier photography
   sites ship one; skin tones are the reason). Paint all colors explicitly.
-- Images only via `astro:assets` (`<Image>`/`<Picture>`), AVIF+WebP, widths `[480, 800, 1200, 1600]`,
-  `priority` on the first stream image. Never lazy-load the LCP image.
+- **Stream images bypass `astro:assets` entirely** — the masters are HDR gain-map JPEGs and
+  `getImage()`/`<Picture>` strip the gain map. They are pre-encoded into `public/photos/` by
+  `scripts/photo-meta.mjs` and rendered as hand-written `<picture>` markup; see § HDR pipeline.
+  Never lazy-load the LCP image. Everything that is *not* a stream photograph (OG cards, any
+  future non-stream image) may still go through `astro:assets`.
 - `npm run build` must pass cleanly (this includes `astro check` — strict TS) before an agent
   reports done. Do not leave the build broken for the next agent.
 - Placeholder user data is always marked `TODO(ryu):` in a comment or visibly in copy.
@@ -112,11 +115,63 @@ small, --ink-faint. Genre appears in a per-shoot label ONLY in the optional list
 Stream order: date desc, then featured desc. Creative portraiture leads naturally via dates/weights.
 
 `scripts/photo-meta.mjs` (prebuild, wired as `predev` + `prebuild`): walks shoots folders, and for
-every image emits into `src/generated/photo-meta.json`: width/height, thumbhash (base64 data-URI
-PNG via `thumbhash` + sharp raw), average hex color, EXIF (camera, lens, focal, aperture, shutter,
-iso — when present). Renders as: thumbhash data-URI as the img's CSS background while loading.
-Script must be incremental (skip files whose mtime+size match the cache) and safe when folders are
-empty. `src/lib/photos.ts` exposes typed helpers to read collection + meta together.
+every image emits into `src/generated/photo-meta.json`: width/height, `isHDR`, the delivery
+`ladder` (see § HDR pipeline), thumbhash (base64 data-URI PNG via `thumbhash` + sharp raw), average
+hex color, EXIF (camera, lens, focal, aperture, shutter, iso — when present). Renders as: thumbhash
+data-URI as the img's CSS background while loading. Script must be incremental (skip files whose
+mtime+size match the cache *and* whose ladder files are all present) and safe when folders are
+empty. `src/lib/photos.ts` exposes typed helpers to read collection + meta together; it is the
+source of truth for which images exist, since an image with no ladder cannot be rendered.
+
+## HDR pipeline
+
+The masters are **HDR gain-map JPEGs** (ISO 21496-1): an authored SDR base image plus an attached
+gain map. Chrome 137+/Edge and Safari 26+ apply the map and render true HDR; every other browser
+ignores it and shows the SDR base, which is a real photograph the photographer graded — not a
+fallback. Firefox never does HDR. That is fine and needs no code.
+
+**Why not `astro:assets`.** Every astro:assets derivative drops the gain map, so the stream is
+pre-encoded instead. `scripts/photo-meta.mjs` writes, per image, widths `[900, 1400, 2048]` (never
+upscaling; a master narrower than 2048 contributes its own width as the top rung):
+
+```
+public/photos/<slug>/<stem>-<w>.jpg    quality 82 — HDR gain-map JPEG (plain JPEG for an SDR master)
+public/photos/<slug>/<stem>-<w>.avif   quality 55 — SDR, for displays that get the SDR rendition anyway
+```
+
+**sharp rules, non-negotiable.** `sharp(src).keepGainMap().resize({width}).jpeg({quality:82})`
+resizes base and gain map in lockstep and preserves the authored SDR base. `keepGainMap` is
+experimental: the chain stays *exactly* resize + jpeg, nothing else (which is why an HDR master
+must arrive with its EXIF rotation already baked into the pixels — the generator refuses one that
+is not upright). **Never `withGainMap()`** — it regenerates the SDR base by tone mapping and comes
+out about 42% darker than what was authored. The AVIF rung is encoded from a plain `sharp(src)`
+read, which yields that same authored SDR base. Detection is `'gainMap' in await sharp(src).metadata()`.
+
+**The `<picture>` pattern** (`src/components/StreamFigure.astro`) — source order is load-bearing:
+
+```html
+<picture>
+  <source media="(dynamic-range: high)" type="image/jpeg" srcset="…900w, …1400w, …2048w" sizes="…">
+  <source type="image/avif" srcset="… same widths …" sizes="…">
+  <img src="<mid-size jpg>" width height alt loading decoding>
+</picture>
+```
+
+`<picture>` knows nothing about HDR — it matches MIME types — but it evaluates `media` before
+`type`. Without the media-gated JPEG first, an HDR-capable Chrome takes the smaller AVIF and
+renders the photo SDR. SDR masters use identical markup (the first source is just a plain JPEG
+ladder); one code path is worth the harmless duplication.
+
+**Safari caveat.** Safari 26.0–26.3 silently drops an HDR `<img>` to SDR when CSS
+opacity/transform/transitions apply to it *or to any ancestor*. So the fade-up reveal is skipped
+entirely on HDR-capable displays — `src/pages/index.astro` returns early on
+`matchMedia('(dynamic-range: high)')`, and `will-change` is only hinted once the reveal is armed.
+Animating the wrapper instead would not help: ancestor opacity affects the image.
+
+**Serving.** The ladder must reach the browser byte-for-byte. No transforming CDN or image service
+may sit in front of it (they re-encode and strip gain maps); `public/photos/` is static output,
+gitignored, rebuilt from the masters. Validate any real export with `node scripts/check-hdr.mjs
+<file|dir>` before trusting it.
 
 Placeholders: `scripts/make-placeholders.mjs` (run once, committed output) generates 3 shoots ×
 3–4 images each, portrait 4:5, 1600px long side, muted warm gradient + film-grain noise + big

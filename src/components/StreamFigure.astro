@@ -8,9 +8,26 @@
  * Each frame sits in an aspect-ratio box painted with its thumbhash, so the
  * layout is final before a single byte of image data arrives (zero CLS) and the
  * reader sees the photograph's colours immediately.
+ *
+ * WHY THE MARKUP IS HAND-ROLLED AND NOT <Picture>
+ * -----------------------------------------------
+ * The masters are HDR gain-map JPEGs. astro:assets strips the gain map from
+ * every derivative it produces, so the frames are served from the static ladder
+ * scripts/photo-meta.mjs writes into public/photos/ (see SPEC.md § HDR pipeline).
+ *
+ * The source order is load-bearing:
+ *   1. media="(dynamic-range: high)" type="image/jpeg" — the HDR JPEG ladder.
+ *   2. type="image/avif" — the SDR ladder, smaller, for everyone else.
+ *   3. <img src> — a mid-size JPEG for anything that matches neither.
+ * <picture> knows nothing about HDR; it only matches MIME types, and it
+ * evaluates `media` before `type`. Without the media-gated JPEG first, an
+ * HDR-capable Chrome would happily take the AVIF and render the photo SDR.
+ * Putting AVIF first would break HDR everywhere.
+ *
+ * For an SDR master the first source is just the same plain JPEG ladder — a
+ * harmless duplicate that keeps this to a single code path.
  */
-import { Picture } from 'astro:assets';
-import type { StreamEntry } from '../lib/photos';
+import { fallbackRung, srcsetFor, type StreamEntry, type StreamImage } from '../lib/photos';
 
 interface Props {
   entry: StreamEntry;
@@ -26,9 +43,8 @@ const { images, caption } = entry;
  * goes edge-to-edge below 640px — see .column-wide.bleed in global.css.
  */
 const SIZES = '(min-width: 1100px) 1036px, (min-width: 640px) calc(100vw - 4rem), 100vw';
-const WIDTHS = [480, 800, 1200, 1600];
 
-const frameStyle = (image: StreamEntry['images'][number]) =>
+const frameStyle = (image: StreamImage) =>
   [
     `aspect-ratio: ${image.width} / ${image.height}`,
     `background-color: ${image.color}`,
@@ -36,28 +52,41 @@ const frameStyle = (image: StreamEntry['images'][number]) =>
   ]
     .filter(Boolean)
     .join('; ');
+
+/** Everything the <picture> needs, resolved once per frame. */
+const frames = images.map((image, index) => {
+  const isLcp = lead && index === 0;
+  const fallback = fallbackRung(image.ladder);
+  return {
+    image,
+    isLcp,
+    fallback,
+    jpegSrcset: srcsetFor(image.ladder, 'jpg'),
+    avifSrcset: srcsetFor(image.ladder, 'avif'),
+  };
+});
 ---
 
 <figure class="shoot">
   {
-    images.map((image, index) => {
-      const isLcp = lead && index === 0;
-      return (
-        <div class:list={['frame', !isLcp && 'fade-up']} style={frameStyle(image)}>
-          <Picture
-            src={image.src}
+    frames.map(({ image, isLcp, fallback, jpegSrcset, avifSrcset }) => (
+      <div class:list={['frame', !isLcp && 'fade-up']} style={frameStyle(image)}>
+        <picture class="frame__picture">
+          <source media="(dynamic-range: high)" type="image/jpeg" srcset={jpegSrcset} sizes={SIZES} />
+          <source type="image/avif" srcset={avifSrcset} sizes={SIZES} />
+          <img
+            src={fallback?.jpg}
+            width={fallback?.w}
+            height={fallback?.h}
             alt={image.alt}
-            widths={WIDTHS}
-            sizes={SIZES}
-            formats={['avif', 'webp']}
-            priority={isLcp}
-            loading={isLcp ? 'eager' : 'lazy'}
             class="frame__img"
-            pictureAttributes={{ class: 'frame__picture' }}
+            loading={isLcp ? 'eager' : 'lazy'}
+            decoding={isLcp ? 'sync' : 'async'}
+            fetchpriority={isLcp ? 'high' : undefined}
           />
-        </div>
-      );
-    })
+        </picture>
+      </div>
+    ))
   }
   <figcaption class="caption">{caption}</figcaption>
 </figure>
@@ -86,13 +115,12 @@ const frameStyle = (image: StreamEntry['images'][number]) =>
     margin-top: var(--space-4);
   }
 
-  /* <Picture> renders <picture><img>; neither carries our scope class. */
-  .frame :global(picture) {
+  .frame__picture {
     display: block;
     height: 100%;
   }
 
-  .frame :global(img) {
+  .frame__img {
     display: block;
     width: 100%;
     height: 100%;

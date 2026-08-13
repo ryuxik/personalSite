@@ -16,7 +16,8 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "placeholders": "node scripts/make-placeholders.mjs"
+    "placeholders": "node scripts/make-placeholders.mjs",
+    "check-hdr": "node scripts/check-hdr.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
