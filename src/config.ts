@@ -1,9 +1,10 @@
 export const SITE = {
-  name: "RYUXIK",                        // TODO(ryu): confirm brand name vs real name
+  name: "RYUXIK",                        // wordmark/brand; the person behind it is below
+  person: "Santiago Munoz",
   url: "https://ryuxik.io",
   title: "Ryuxik — Photographer",
   description: "Creative portraiture and photography sessions. Book time with me.",
-  email: "hello@ryuxik.io",              // TODO(ryu): confirm address
+  email: "ryuxik@gmail.com",
   instagram: "https://www.instagram.com/santi7ago/",
   city: "New York, NY",
   calConsult: "ryuxik/intro-call",       // TODO(ryu): create on cal.com

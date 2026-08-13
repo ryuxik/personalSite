@@ -21,27 +21,16 @@ const instagramHandle = SITE.instagram.replace(/\/+$/, '').split('/').pop() ?? '
   <Seo
     slot="head"
     title="Information"
-    description="Ryuxik is a photographer working in creative portraiture. Bio, email, and Instagram."
+    description="Santiago Munoz (Ryuxik) — NYC based photographer. Email and Instagram."
     ogImage="/og/information.jpg"
     type="profile"
   />
-  <PersonJsonLd slot="head" />
+  <PersonJsonLd slot="head" name={SITE.person} />
 
   <div class="column">
     <h1>Information</h1>
 
-    <p class="bio">
-      Ryuxik is a photographer working mostly in creative portraiture. He picked up a camera
-      <span class="todo">TODO(ryu): origin — where you're from and how you started, one clause</span>,
-      and learned the craft
-      <span class="todo">TODO(ryu): training — school, apprenticeship, a mentor, or the self-taught route</span>.
-      His work has been
-      <span class="todo">TODO(ryu): one credential — an award, a residency, a group show, or a named client</span>,
-      and appears in
-      <span class="todo">TODO(ryu): where the work appears — publications, galleries, or brands</span>.
-      He photographs people first, takes a small number of commissions each year, and works out of
-      <span class="todo">TODO(ryu): city — also fill SITE.city in src/config.ts</span>.
-    </p>
+    <p class="bio">Santiago Munoz — NYC based photographer.</p>
 
     <section class="contact" aria-labelledby="contact-heading">
       <h2 class="label label--ink" id="contact-heading">Contact</h2>
@@ -69,19 +58,6 @@ const instagramHandle = SITE.instagram.replace(/\/+$/, '').split('/').pop() ?? '
   .bio {
     font-size: 1.12rem;
     line-height: 1.75;
-  }
-
-  /* Visible placeholder. Deliberately loud enough to be impossible to ship by accident. */
-  .todo {
-    font-family: var(--grotesque);
-    font-size: 0.8em;
-    letter-spacing: 0.02em;
-    color: var(--accent);
-    background-color: color-mix(in srgb, var(--accent) 8%, transparent);
-    border-bottom: 1px dotted color-mix(in srgb, var(--accent) 55%, transparent);
-    padding: 0.05em 0.28em;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
   }
 
   .contact {
