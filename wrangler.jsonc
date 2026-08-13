@@ -1,0 +1,11 @@
+// Cloudflare Workers static-assets deploy for the Astro site.
+// `npx wrangler deploy` (the Workers Builds deploy command) reads this.
+{
+  "name": "personalsite",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
+}
