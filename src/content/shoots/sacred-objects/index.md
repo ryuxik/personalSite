@@ -6,5 +6,5 @@ date: 2026-03-05
 location: "Japan & China"
 genre: other
 cover: ./001.jpg
-featured: 30
+featured: 65
 ---
