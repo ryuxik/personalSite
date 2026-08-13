@@ -18,14 +18,6 @@ import CalEmbed from '../components/CalEmbed.astro';
 import Faq from '../components/Faq.astro';
 import InquiryForm from '../components/InquiryForm.astro';
 import { SITE } from '../config';
-import { fallbackRung, getPhotoMeta } from '../lib/photos';
-
-/* VP's studio headshot (a real booked session) doubles as proof beside the
-   booking calendar. Served from the same HDR ladder as the stream. */
-const vpMeta = getPhotoMeta('vp/001.jpg');
-if (!vpMeta) throw new Error('sessions.astro: vp/001.jpg missing from photo-meta — run npm run generate');
-const vpLadder = vpMeta.ladder;
-const vpFallback = fallbackRung(vpLadder) ?? vpLadder[vpLadder.length - 1];
 
 interface Tier {
   name: string;
@@ -174,31 +166,6 @@ const TIERS: Tier[] = [
   </div>
 
   <div class="column-wide section">
-    <figure class="book-proof">
-      <picture>
-        <source
-          media="(dynamic-range: high)"
-          type="image/jpeg"
-          srcset={vpLadder.map((r) => `${r.jpg} ${r.w}w`).join(', ')}
-          sizes="(min-width: 1100px) 1036px, (min-width: 640px) calc(100vw - 4rem), 100vw"
-        />
-        <source
-          type="image/avif"
-          srcset={vpLadder.map((r) => `${r.avif} ${r.w}w`).join(', ')}
-          sizes="(min-width: 1100px) 1036px, (min-width: 640px) calc(100vw - 4rem), 100vw"
-        />
-        <img
-          src={vpFallback.jpg}
-          width={vpFallback.w}
-          height={vpFallback.h}
-          alt="Studio headshot from a booked session — for VP"
-          loading="lazy"
-          decoding="async"
-        />
-      </picture>
-      <figcaption class="caption">for VP — Headshot Session · Mar '26</figcaption>
-    </figure>
-
     <CalEmbed
       id="book"
       eyebrow={'Headshots & standard sessions'}
@@ -432,18 +399,4 @@ const TIERS: Tier[] = [
     }
   }
 
-  /* --- VP headshot beside the booking calendar --------------------------- */
-  .book-proof {
-    margin: 0 0 var(--space-7);
-  }
-
-  .book-proof img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  .book-proof .caption {
-    margin-top: var(--space-2);
-  }
 </style>
