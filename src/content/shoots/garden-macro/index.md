@@ -6,5 +6,5 @@ date: 2026-08-07
 location: "New York, NY"
 genre: other
 cover: ./001.jpg
-featured: 85
+featured: 60
 ---

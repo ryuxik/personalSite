@@ -6,5 +6,5 @@ date: 2026-03-01
 location: "Japan"
 genre: portraiture
 cover: ./001.jpg
-featured: 75
+featured: 88
 ---

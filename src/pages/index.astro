@@ -13,6 +13,33 @@ import StreamFigure from '../components/StreamFigure.astro';
 import { getStream } from '../lib/photos';
 
 const stream = await getStream();
+
+/**
+ * Editorial interstitial CTAs, keyed by the shoot slug they follow. Three,
+ * deliberately: after the people block, once mid-stream for concept work, and
+ * as the closing note. Caption-scale, quiet — the shoots are the pitch; these
+ * are just the door. More would turn the gallery into a carousel ad.
+ */
+const STREAM_CTAS: Record<string, { eyebrow: string; text: string; href: string; label: string }> = {
+  'cat-study': {
+    eyebrow: 'Portraits, headshots, personal sessions',
+    text: 'Book a session like these — fixed scope, on the calendar in two minutes.',
+    href: '/sessions/#book',
+    label: 'See open times',
+  },
+  japan: {
+    eyebrow: 'Concept & editorial work',
+    text: 'Have an idea that needs building? It starts with a free 20-minute consult.',
+    href: '/sessions/#consult',
+    label: 'Start a project',
+  },
+  'medium-format-diary': {
+    eyebrow: 'Work with me',
+    text: 'New York based, travels well. Sessions, portraits, and commissioned projects.',
+    href: '/sessions/',
+    label: 'Sessions & pricing',
+  },
+};
 ---
 
 <BaseLayout>
@@ -72,7 +99,22 @@ const stream = await getStream();
   </script>
 
   <div class="column-wide bleed stream">
-    {stream.map((entry, index) => <StreamFigure entry={entry} lead={index === 0} />)}
+    {
+      stream.map((entry, index) => (
+        <>
+          <StreamFigure entry={entry} lead={index === 0} />
+          {STREAM_CTAS[entry.shoot.id] && (
+            <aside class="stream-cta">
+              <span class="eyebrow">{STREAM_CTAS[entry.shoot.id].eyebrow}</span>
+              <p class="stream-cta__text">{STREAM_CTAS[entry.shoot.id].text}</p>
+              <a class="stream-cta__link" href={STREAM_CTAS[entry.shoot.id].href}>
+                {STREAM_CTAS[entry.shoot.id].label} &rarr;
+              </a>
+            </aside>
+          )}
+        </>
+      ))
+    }
 
     {
       stream.length === 0 && (
@@ -84,3 +126,40 @@ const stream = await getStream();
     }
   </div>
 </BaseLayout>
+
+<style>
+  /* Editorial interstitial — caption-scale, hairline-framed, deliberately quiet.
+     Inherits the stream's rhythm: it reads as a chapter break, not a banner. */
+  .stream-cta {
+    max-width: 32rem;
+    margin: calc(var(--space-8) * 1.25) auto;
+    padding: var(--space-6) var(--gutter);
+    text-align: center;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .stream-cta__text {
+    font-family: var(--serif);
+    font-size: 1.12rem;
+    line-height: 1.55;
+    margin: var(--space-3) 0 var(--space-4);
+    text-wrap: balance;
+  }
+
+  .stream-cta__link {
+    font-family: var(--grotesque);
+    font-size: 0.76rem;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    padding-bottom: 2px;
+  }
+
+  .stream-cta__link:hover,
+  .stream-cta__link:focus-visible {
+    border-bottom-color: var(--accent);
+  }
+</style>
