@@ -3,17 +3,15 @@
 # Limits: 2000 static + 100 dynamic rules, 1000 characters per rule.
 # Docs: https://developers.cloudflare.com/workers/static-assets/redirects/
 #
-# !! READ THIS BEFORE TRUSTING THE RULE BELOW !!
+# !! WHERE THE www -> apex REDIRECT LIVES !!
 # Workers Assets matches `source` as a PATH. It cannot match on hostname, and
-# "domain-level redirects" are explicitly unsupported. So the www -> apex rule
-# below is inert on Workers Assets, and the canonical-host redirect MUST be set
-# up as a zone-level Single Redirect in the Cloudflare dashboard:
-#   Cloudflare dashboard -> ryuxik.io -> Rules -> Redirect Rules -> Create rule
+# wrangler REJECTS any rule with an absolute URL outright (error 100324,
+# "Only relative URLs are allowed") — the deploy fails, it is not ignored.
+# So the canonical-host redirect exists ONLY as a zone-level Single Redirect
+# in the Cloudflare dashboard:
+#   Cloudflare dashboard -> ryuxik.io -> Rules -> Redirect Rules
+#     Rule "WWW to root":
 #     If:   hostname equals www.ryuxik.io
 #     Then: dynamic redirect, 301, preserve query string,
 #           expression: concat("https://ryuxik.io", http.request.uri.path)
-# The rule is kept here anyway: it is the correct, portable expression of the
-# intent, it costs one line, and it starts working unchanged if this ever moves
-# to a host whose redirect file does match on hostname.
-
-https://www.ryuxik.io/* https://ryuxik.io/:splat 301
+# Do NOT re-add the rule here, even as documentation: it breaks every deploy.
