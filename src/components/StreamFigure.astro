@@ -157,13 +157,13 @@ const shareOf = (row: Frame[], f: Frame) =>
   }
 
   /* A row is one line of the stream: a solo frame or a matched-height diptych.
-     It is also the scroll-snap unit, so pairs settle together. */
+     Scroll-snap was tried (mandatory, then proximity) and rejected — the
+     stream scrolls free; the viewport height cap alone paces the images. */
   .row {
     display: flex;
     justify-content: center;
     align-items: flex-start;
     gap: var(--space-4);
-    scroll-snap-align: center;
   }
 
   .row + .row {
