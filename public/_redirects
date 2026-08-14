@@ -1,0 +1,19 @@
+# ryuxik.io · redirects for the Cloudflare Workers static-assets deploy.
+# Consumed as config, never served. Evaluated BEFORE public/_headers.
+# Limits: 2000 static + 100 dynamic rules, 1000 characters per rule.
+# Docs: https://developers.cloudflare.com/workers/static-assets/redirects/
+#
+# !! READ THIS BEFORE TRUSTING THE RULE BELOW !!
+# Workers Assets matches `source` as a PATH. It cannot match on hostname, and
+# "domain-level redirects" are explicitly unsupported. So the www -> apex rule
+# below is inert on Workers Assets, and the canonical-host redirect MUST be set
+# up as a zone-level Single Redirect in the Cloudflare dashboard:
+#   Cloudflare dashboard -> ryuxik.io -> Rules -> Redirect Rules -> Create rule
+#     If:   hostname equals www.ryuxik.io
+#     Then: dynamic redirect, 301, preserve query string,
+#           expression: concat("https://ryuxik.io", http.request.uri.path)
+# The rule is kept here anyway: it is the correct, portable expression of the
+# intent, it costs one line, and it starts working unchanged if this ever moves
+# to a host whose redirect file does match on hostname.
+
+https://www.ryuxik.io/* https://ryuxik.io/:splat 301

@@ -9,8 +9,10 @@
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Seo from '../components/Seo.astro';
+import PersonJsonLd from '../components/PersonJsonLd.astro';
 import StreamFigure from '../components/StreamFigure.astro';
 import { getStream } from '../lib/photos';
+import { SITE } from '../config';
 
 const stream = await getStream();
 
@@ -43,12 +45,14 @@ const STREAM_CTAS: Record<string, { eyebrow: string; text: string; href: string;
 ---
 
 <BaseLayout>
+  {/* No `title` prop on purpose: the home page carries SITE.title verbatim,
+      which is the brand + city string search results should show. */}
   <Seo
     slot="head"
-    title="Overview"
-    description="Selected photography: creative portraiture, personal and commissioned work."
+    description="Portrait and headshot photographer in New York. Creative portraiture, personal and commissioned work, sessions bookable online."
     ogImage="/og/home.jpg"
   />
+  <PersonJsonLd slot="head" name={SITE.person} />
   <h1 class="visually-hidden">Overview: selected work</h1>
 
   {
@@ -65,8 +69,9 @@ const STREAM_CTAS: Record<string, { eyebrow: string; text: string; href: string;
       var root = document.documentElement;
       if (!('IntersectionObserver' in window)) return;
       if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      // Safari 26.0–26.3 silently drops an HDR <img> to SDR when opacity/transform/
-      // transitions apply to it or any ancestor — so on HDR displays, no fade at all.
+      // Safari 26.0 to 26.3 silently drops an HDR <img> to SDR when opacity,
+      // transform or transitions apply to it or any ancestor, so on an HDR
+      // display there is no fade at all.
       if (window.matchMedia && window.matchMedia('(dynamic-range: high)').matches) return;
 
       root.classList.add('fade-up-ready');

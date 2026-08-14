@@ -13,8 +13,41 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Seo from '../components/Seo.astro';
 import PersonJsonLd from '../components/PersonJsonLd.astro';
 import { SITE } from '../config';
+import { fallbackRung, getShootImages, getShoots, srcsetFor } from '../lib/photos';
 
 const instagramHandle = SITE.instagram.replace(/\/+$/, '').split('/').pop() ?? 'instagram';
+
+/**
+ * The self-portrait beside the bio.
+ *
+ * Hand-rolled <picture>, exactly like StreamFigure: the masters are HDR gain-map
+ * JPEGs and astro:assets strips the gain map, so this reads the pre-encoded
+ * ladder in public/photos/ (SPEC.md § HDR pipeline). Source order is
+ * load-bearing — media-gated JPEG first, AVIF second — because <picture>
+ * evaluates `media` before `type`, and an HDR-capable browser would otherwise
+ * take the smaller AVIF and render the frame SDR.
+ *
+ * Sourced through src/lib/photos.ts rather than a hardcoded path so the alt text
+ * comes from the same `alts` frontmatter map the stream uses, and so the figure
+ * disappears cleanly instead of 404ing if the shoot is ever removed.
+ */
+const SELF_PORTRAIT = 'prism-self-portraits';
+const portraitShoot = (await getShoots()).find((shoot) => shoot.id === SELF_PORTRAIT);
+const portrait = portraitShoot ? getShootImages(portraitShoot)[0] : undefined;
+const portraitImg = portrait ? fallbackRung(portrait.ladder, 900) : undefined;
+
+// Capped at 420px, so never ask the browser for a rung wider than it can use.
+const PORTRAIT_SIZES = '(min-width: 700px) 420px, min(72vw, 420px)';
+
+const portraitStyle = portrait
+  ? [
+      `aspect-ratio: ${portrait.width} / ${portrait.height}`,
+      `background-color: ${portrait.color}`,
+      portrait.thumbhash ? `background-image: url("${portrait.thumbhash}")` : null,
+    ]
+      .filter(Boolean)
+      .join('; ')
+  : undefined;
 ---
 
 <BaseLayout>
@@ -30,7 +63,34 @@ const instagramHandle = SITE.instagram.replace(/\/+$/, '').split('/').pop() ?? '
   <div class="column">
     <h1>Information</h1>
 
-    <p class="bio">Santiago Munoz. NYC based photographer.</p>
+    <div class="intro">
+      {
+        portrait && portraitImg && (
+          <figure class="portrait" style={portraitStyle}>
+            <picture>
+              <source
+                media="(dynamic-range: high)"
+                type="image/jpeg"
+                srcset={srcsetFor(portrait.ladder, 'jpg')}
+                sizes={PORTRAIT_SIZES}
+              />
+              <source type="image/avif" srcset={srcsetFor(portrait.ladder, 'avif')} sizes={PORTRAIT_SIZES} />
+              <img
+                src={portraitImg.jpg}
+                width={portraitImg.w}
+                height={portraitImg.h}
+                alt={portrait.alt}
+                class="portrait__img"
+                loading="eager"
+                decoding="async"
+              />
+            </picture>
+          </figure>
+        )
+      }
+
+      <p class="bio">Santiago Munoz. NYC based photographer.</p>
+    </div>
 
     <section class="contact" aria-labelledby="contact-heading">
       <h2 class="label label--ink" id="contact-heading">Contact</h2>
@@ -55,9 +115,45 @@ const instagramHandle = SITE.instagram.replace(/\/+$/, '').split('/').pop() ?? '
     margin-bottom: var(--space-6);
   }
 
+  /* Portrait beside the bio on a wide screen, above it on a narrow one.
+     No opacity/transform anywhere in this subtree: Safari 26.0-26.3 drops an
+     HDR <img> to SDR when either applies to it or an ancestor. */
+  .intro {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-6);
+  }
+
+  .portrait {
+    flex: 0 0 auto;
+    width: min(420px, 42%);
+    overflow: hidden;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    /* aspect-ratio, average colour and thumbhash arrive inline */
+  }
+
+  .portrait__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   .bio {
     font-size: 1.12rem;
     line-height: 1.75;
+  }
+
+  @media (max-width: 640px) {
+    .intro {
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .portrait {
+      width: min(100%, 420px);
+    }
   }
 
   .contact {

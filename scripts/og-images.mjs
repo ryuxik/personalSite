@@ -4,11 +4,18 @@
  * Runs at `predev` / `prebuild`, after scripts/photo-meta.mjs (see package.json § generate).
  *
  * Emits 1200×630 JPEGs → public/og/{home,sessions,information}.jpg
+ * and the app icons → public/{apple-touch-icon.png,icon-512.png,favicon.svg}
  *
- *   with photos: the leading stream cover (date desc, then featured desc), cropped
- *                to 1.91:1, darkened with a top→bottom gradient, wordmark overlaid.
- *                Distinct covers per page when the collection has enough shoots.
+ *   pinned:      each page names its own source frame in PAGE_SOURCES below. The
+ *                card is an editorial choice, not a side effect of sort order:
+ *                the booking page gets a real studio headshot, the about page
+ *                gets the photographer's own face.
+ *   with photos: no pinned file on disk → the leading stream cover (date desc,
+ *                then featured desc), so a renamed shoot degrades instead of failing.
  *   no photos:   wordmark in --ink on a --paper ground. Same composition, no image.
+ *
+ * All of them are cropped to 1.91:1, darkened with a top→bottom gradient, and get
+ * the wordmark overlaid.
  *
  * Three properties this script is built around:
  *
@@ -34,10 +41,27 @@ import sharp from 'sharp';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SHOOTS_DIR = resolve(ROOT, 'src/content/shoots');
 const OUT_DIR = resolve(ROOT, 'public/og');
+const PUBLIC_DIR = resolve(ROOT, 'public');
 const MANIFEST = resolve(ROOT, 'node_modules/.cache/og-images/manifest.json');
 
 /** Bump when the composition changes, so cached outputs are invalidated. */
-const RECIPE = 5;
+const RECIPE = 6;
+
+/**
+ * Per-page OG source, pinned. Repo-relative so the manifest signature is stable
+ * across machines. A path that is not on disk falls back to the automatic cover
+ * pick, so a renamed or deleted shoot degrades the card instead of the build.
+ *
+ *   home        the strongest frame in the book — the fashion opener.
+ *   sessions    a real studio headshot: the booking page has to look like the
+ *               thing being booked, not like a travel photograph.
+ *   information the photographer's self-portrait, on the page that is about him.
+ */
+const PAGE_SOURCES = {
+  home: 'src/content/shoots/fashion-dq/001.jpg',
+  sessions: 'src/content/shoots/vp/001.jpg',
+  information: 'src/content/shoots/prism-self-portraits/002.jpg',
+};
 
 const WIDTH = 1200;
 const HEIGHT = 630;
@@ -281,6 +305,78 @@ function overlaySvg(brand, { onPhoto }) {
   );
 }
 
+/* ----------------------------------------------------------------- icons ---- */
+
+/**
+ * The app icon: the wordmark's own R, alone, --ink on --paper. Same stroked
+ * letterform and same 100-unit cap-height grid as the OG wordmark above, so the
+ * favicon and the social card are demonstrably the same typeface feel and there
+ * is still no font dependency to resolve (see NO FONT DEPENDENCY at the top).
+ *
+ * @param {number|null} size  pixel width/height for rasterising; null emits a
+ *   resolution-independent SVG (what public/favicon.svg wants).
+ */
+function markSvg(size = null) {
+  const glyph = GLYPHS.R;
+  const scale = 0.7; // cap height = 70% of the tile, leaving an even margin
+  const drawnWidth = glyph.w * scale;
+  const drawnHeight = CAP * scale;
+  const originX = (100 - drawnWidth) / 2;
+  const originY = (100 - drawnHeight) / 2;
+  const dimensions = size ? ` width="${size}" height="${size}"` : '';
+
+  /**
+   * Identical coordinates to GLYPHS.R, with the stem and the arm welded into one
+   * subpath (bottom of stem → up → across the arm → round the bowl). In the
+   * wordmark they are two butt-capped paths that merely meet at 5.5,5.5, which
+   * leaves a half-stroke square of paper uncovered at the top-left corner. At
+   * 16-32px that notch reads as a broken glyph, so here the corner is a real
+   * mitered join instead. The leg stays separate; it lands inside the bowl.
+   */
+  const MARK_PATHS = ['M5.5,94.5 V5.5 H34 A22.25,22.25 0 0 1 34,50 H5.5', 'M30,50 L56.5,94.5'];
+  const paths = MARK_PATHS.map((d) => `<path d="${d}"/>`).join('');
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg"${dimensions} viewBox="0 0 100 100">` +
+    `<rect width="100" height="100" fill="${PAPER}"/>` +
+    `<g transform="translate(${originX.toFixed(2)},${originY.toFixed(2)}) scale(${scale})" ` +
+    `fill="none" stroke="${INK}" stroke-width="${STROKE}" stroke-linecap="butt" stroke-linejoin="miter">` +
+    `${paths}</g></svg>\n`
+  );
+}
+
+/** apple-touch-icon is what iOS uses for a home-screen bookmark; 512 is the PWA icon. */
+const ICONS = [
+  { file: 'apple-touch-icon.png', size: 180 },
+  { file: 'icon-512.png', size: 512 },
+];
+
+/**
+ * Writes public/favicon.svg plus the two PNG rasterisations. favicon.svg is
+ * committed (a fresh clone needs an icon before `generate` has ever run) and the
+ * output here is byte-deterministic, so rewriting it every build produces no diff.
+ * The PNGs are generated artefacts and gitignored alongside public/og/.
+ */
+async function writeIcons(previousSig) {
+  const sig = signature({ RECIPE, icons: ICONS, mark: markSvg() });
+  const destinations = [resolve(PUBLIC_DIR, 'favicon.svg'), ...ICONS.map((i) => resolve(PUBLIC_DIR, i.file))];
+
+  if (previousSig === sig && (await Promise.all(destinations.map(exists))).every(Boolean)) {
+    return { sig, written: 0, skipped: destinations.length };
+  }
+
+  await writeFile(resolve(PUBLIC_DIR, 'favicon.svg'), markSvg(), 'utf8');
+
+  for (const icon of ICONS) {
+    await sharp(Buffer.from(markSvg(icon.size)))
+      .flatten({ background: PAPER }) // opaque: iOS composites a home-screen icon on black
+      .png({ compressionLevel: 9 })
+      .toFile(resolve(PUBLIC_DIR, icon.file));
+  }
+
+  return { sig, written: destinations.length, skipped: 0 };
+}
+
 /* --------------------------------------------------------------- compose ---- */
 
 async function composePhoto(source, overlay, dest) {
@@ -352,8 +448,14 @@ async function main() {
 
   for (const [index, page] of PAGES.entries()) {
     const dest = join(OUT_DIR, `${page}.jpg`);
-    // Distinct cover per page when the collection is deep enough; wraps otherwise.
-    const source = covers.length > 0 ? covers[index % covers.length] : null;
+    // Pinned frame first (an editorial choice per page); the automatic cover pick
+    // is only the safety net for a source that has moved. Wraps when short.
+    const pinned = PAGE_SOURCES[page] ? resolve(ROOT, PAGE_SOURCES[page]) : null;
+    const pinnedExists = pinned ? await exists(pinned) : false;
+    if (pinned && !pinnedExists) {
+      console.warn(`[og-images] ${page}: pinned source missing (${PAGE_SOURCES[page]}) — falling back to a cover.`);
+    }
+    const source = pinnedExists ? pinned : covers.length > 0 ? covers[index % covers.length] : null;
 
     let sourceStamp = null;
     if (source) {
@@ -396,10 +498,21 @@ async function main() {
     }
   }
 
+  // Icons share this script's manifest, sharp instance and letterform grid.
+  try {
+    const icons = await writeIcons(previous.icons);
+    next.icons = icons.sig;
+    written += icons.written;
+    skipped += icons.skipped;
+  } catch (error) {
+    // An icon is a nice-to-have; it must not cost a deploy any more than an OG card does.
+    console.warn('[og-images] icons failed —', error?.message ?? error);
+  }
+
   await writeManifest(next);
 
   const mode = covers.length > 0 ? `${covers.length} shoot cover(s)` : 'no shoots — wordmark fallback';
-  console.log(`[og-images] ${written} written, ${skipped} unchanged (${mode}) → public/og/`);
+  console.log(`[og-images] ${written} written, ${skipped} unchanged (${mode}) → public/og/ + public/ icons`);
 }
 
 main().catch((error) => {

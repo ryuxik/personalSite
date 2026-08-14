@@ -7,6 +7,11 @@ dist/
 
 # generated at predev/prebuild time by scripts/photo-meta.mjs + scripts/og-images.mjs
 public/og/
+# PNG rasterisations of the R mark, from the same letterform as the OG wordmark.
+# public/favicon.svg is NOT ignored: a fresh clone needs an icon before
+# `npm run generate` has ever run, and og-images.mjs rewrites it byte-identically.
+public/apple-touch-icon.png
+public/icon-512.png
 # the HDR/SDR delivery ladder — re-encoded from the masters by photo-meta.mjs
 
 # Masters straight out of Lightroom: the HDR half (.avif) and the authored SDR

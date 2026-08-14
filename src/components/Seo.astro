@@ -51,7 +51,7 @@ const OG_BY_PATH: Record<string, string> = {
 const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
 const ogPath = ogImage ?? OG_BY_PATH[path] ?? '/og/home.jpg';
 const ogUrl = new URL(ogPath, SITE.url).href;
-const ogAlt = imageAlt ?? `${SITE.name} — photography`;
+const ogAlt = imageAlt ?? `${SITE.name} · photography`;
 ---
 
 <title>{pageTitle}</title>

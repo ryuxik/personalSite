@@ -11,4 +11,7 @@ export const SITE = {
   calConsult: "ryuxik/intro-call",       // TODO(ryu): create on cal.com
   calHeadshots: "ryuxik/headshots",      // TODO(ryu): create on cal.com, attach Stripe retainer
   formEndpoint: "",                      // TODO(ryu): e.g. Formspree URL; empty = form hidden, email shown
+  // Cloudflare Web Analytics site token. Empty = no beacon is emitted at all.
+  // TODO(ryu): paste the token from Cloudflare dashboard → Web Analytics → Add a site.
+  analyticsToken: "",
 };

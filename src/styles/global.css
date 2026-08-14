@@ -22,7 +22,7 @@
   --paper:     #F1EEE5;  /* page ground — warm bone */
   --ink:       #33291E;  /* warm near-black text */
   --ink-soft:  #6E5D4A;  /* secondary text */
-  --ink-faint: #94846F;  /* captions, datelines */
+  --ink-faint: #75654F;  /* captions, datelines — 4.85:1 on --paper, 4.51:1 on --card (WCAG AA) */
   --line:      #DAD3C4;  /* hairlines, borders */
   --card:      #EAE6DA;  /* raised surfaces */
   --accent:    #7A4A2B;  /* links, active nav, CTAs — deep sepia */

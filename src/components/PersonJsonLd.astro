@@ -29,11 +29,39 @@ const {
   name = titleCased,
   jobTitle = 'Photographer',
   description = SITE.description,
-  image = '/og/information.jpg',
+  // The photographer's own face, straight off the delivery ladder in public/photos/
+  // (see SPEC.md § HDR pipeline — never routed through astro:assets). A portrait of
+  // the person beats a wordmark card as the Person node's `image`.
+  image = '/photos/prism-self-portraits/001-900.jpg',
   sameAs = [],
 } = Astro.props;
 
 const profiles = [SITE.instagram, ...sameAs].filter((url): url is string => Boolean(url));
+
+/**
+ * Locality, omit-safe: SITE.city is "New York, NY", but it may legitimately be
+ * empty, and a blank PostalAddress is worse than none. Everything below spreads
+ * to nothing when the city is not set.
+ */
+const city = SITE.city.trim();
+const [localityName = '', regionName = ''] = city.split(',').map((part) => part.trim());
+
+const postalAddress = localityName
+  ? {
+      '@type': 'PostalAddress',
+      addressLocality: localityName,
+      ...(regionName ? { addressRegion: regionName } : {}),
+      addressCountry: 'US',
+    }
+  : undefined;
+
+const place = postalAddress
+  ? {
+      address: postalAddress,
+      homeLocation: { '@type': 'Place', name: city, address: postalAddress },
+      workLocation: { '@type': 'Place', name: city, address: postalAddress },
+    }
+  : {};
 
 const person = {
   '@context': 'https://schema.org',
@@ -46,6 +74,7 @@ const person = {
   image: new URL(image, SITE.url).href,
   email: `mailto:${SITE.email}`,
   ...(profiles.length > 0 ? { sameAs: profiles } : {}),
+  ...place,
   knowsAbout: ['Portrait photography', 'Creative portraiture', 'Headshot photography'],
 };
 

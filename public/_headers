@@ -1,0 +1,52 @@
+# ryuxik.io · response headers for the Cloudflare Workers static-assets deploy.
+#
+# Workers Assets consumes this file as CONFIG: it is never served as an asset,
+# and its rules apply to static asset responses only (a Worker's own responses
+# would have to set headers in code; this site has none, wrangler.jsonc is
+# assets-only). Limits: 100 rules, 2000 characters per line. Every matching rule
+# applies and duplicate header names are comma-joined, so the /* block below
+# stacks on top of the cache blocks rather than replacing them.
+#
+# Docs: https://developers.cloudflare.com/workers/static-assets/headers/
+
+# The HDR/SDR delivery ladder (SPEC.md § HDR pipeline). A year, immutable.
+# CAVEAT: unlike /_astro/, these filenames are NOT content-hashed. They are
+# <stem>-<width>.jpg. Re-encoding an existing frame therefore will not reach a
+# visitor who already cached it. Adding frames is unaffected. If a re-encode
+# ever has to ship, rename the file or drop this block to `max-age=86400` first.
+/photos/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Astro's own build output: fingerprinted, so immutable is exactly right.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Social cards: stable URLs, regenerated when a pinned source changes. A day is
+# the compromise between a stale unfurl and pointless refetching.
+/og/*
+  Cache-Control: public, max-age=86400
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://app.cal.com https://cal.com https://*.cal.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://app.cal.com https://cal.com https://*.cal.com; font-src 'self' data:; connect-src 'self' https://app.cal.com https://cal.com https://*.cal.com https://cloudflareinsights.com https://static.cloudflareinsights.com; frame-src https://app.cal.com https://cal.com https://*.cal.com; media-src 'self'; worker-src 'self' blob:; manifest-src 'self'
+
+# Notes on the CSP above, so the next edit does not quietly break something:
+#
+#   script-src 'unsafe-inline'  is load-bearing. The stream reveal, the Cal
+#     loader and the analytics beacon are all inline `is:inline` scripts; a
+#     nonce is impossible on a fully static, CDN-cached page.
+#   style-src 'unsafe-inline'   is load-bearing. StreamFigure sets aspect-ratio,
+#     thumbhash and computed widths as inline style attributes.
+#   *.cal.com is listed alongside the bare cal.com and app.cal.com on purpose:
+#     a wildcard host does NOT match the apex.
+#   frame-src covers the Cal inline embed's iframe (Cal is initialised with
+#     origin https://cal.com but embed.js is served from app.cal.com).
+#   static.cloudflareinsights.com / cloudflareinsights.com are pre-authorised so
+#     that pasting SITE.analyticsToken into src/config.ts needs no header change.
+#   form-action is deliberately ABSENT: SITE.formEndpoint is still empty, and a
+#     locked-down form-action would break the inquiry form the moment a
+#     Formspree (or other) endpoint is set. Add
+#     `form-action 'self' <endpoint-origin>;` at the same time as the endpoint.

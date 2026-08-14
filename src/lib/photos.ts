@@ -163,15 +163,31 @@ export async function getShoots(): Promise<Shoot[]> {
 }
 
 /**
- * TODO(ryu): real alt text per frame once the placeholders are replaced —
- * describe what is in the photograph, not just who it is of. Until then this
- * derives something honest and unique from the frontmatter.
+ * Derived alt text, used only for a frame with no hand-written entry in the
+ * shoot's `alts` map. It is deliberately dull but honest and unique per frame.
+ *
+ * `subject` is often a credit ("for DQ") rather than a description of what is
+ * in the picture, so it leads only when it reads as a subject; otherwise the
+ * shoot title carries the sentence. No em dashes: this string is rendered.
  */
-function altFor(shoot: Shoot, index: number, total: number): string {
+function fallbackAlt(shoot: Shoot, index: number, total: number): string {
   const { subject, title, location } = shoot.data;
+  const who = subject.trim();
+  const lead = /^for\s/i.test(who) || who === title ? title : `${who} · ${title}`;
   const where = location ? `, ${location}` : '';
-  const frame = total > 1 ? ` — frame ${index + 1} of ${total}` : '';
-  return `${subject} — ${title}${where}${frame}`;
+  const frame = total > 1 ? ` · frame ${index + 1} of ${total}` : '';
+  return `${lead}${where}${frame}`;
+}
+
+/**
+ * The alt text for one frame: the hand-written `alts["001.jpg"]` from the
+ * shoot's frontmatter when it exists, else the derived fallback above. The map
+ * is optional and may be partial, so a shoot mid-way through being described
+ * still renders with sensible text on every frame.
+ */
+function altFor(shoot: Shoot, file: string, index: number, total: number): string {
+  const written = shoot.data.alts?.[file]?.trim();
+  return written ? written : fallbackAlt(shoot, index, total);
 }
 
 /**
@@ -213,7 +229,7 @@ export function getShootImages(shoot: Shoot): StreamImage[] {
         color: meta.color ?? 'transparent',
         thumbhash: meta.thumbhash,
         exif: meta.exif,
-        alt: altFor(shoot, index, files.length),
+        alt: altFor(shoot, file, index, files.length),
       };
     })
     .filter((image): image is StreamImage => image !== undefined);

@@ -23,6 +23,13 @@ const shoots = defineCollection({
     genre: z.enum(['portraiture', 'street', 'landscape', 'events', 'other']),
     cover: z.string(),
     featured: z.number().default(0),
+    // Per-image alt text, keyed by bare filename ("001.jpg"). Optional and partial:
+    // src/lib/photos.ts prefers alts[file] and falls back to a derived string for any
+    // frame that has no entry yet, so a half-written map never breaks the stream.
+    // Two arguments, not one: astro/zod is zod 4, whose `record` types require an
+    // explicit key schema. The 1-arg form still validates at runtime but infers
+    // `{}` for the value, which loses the string type at every call site.
+    alts: z.record(z.string(), z.string()).optional(),
   }),
 });
 

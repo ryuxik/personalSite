@@ -75,7 +75,7 @@ const initScript = `
 
     try {
       Cal("init", NS, { origin: "https://cal.com" });
-      /* theme:"light" here in \`config\` is the one that counts — config becomes
+      /* theme:"light" here in \`config\` is the one that counts: config becomes
          the embed iframe's query string (?theme=light). Setting theme only in
          the "ui" call below does NOT reach the iframe (verified). Without it
          Cal follows the visitor's prefers-color-scheme and drops a dark
@@ -97,15 +97,15 @@ const initScript = `
     }
 
     /* Measured Cal behaviour, not guesswork:
-         success — <cal-inline> mounts in ~150ms and never carries a loading
+         success · <cal-inline> mounts in ~150ms and never carries a loading
                    attribute at all;
-         failure — the same element gains loading="failed" + data-error-code
+         failure · the same element gains loading="failed" + data-error-code
                    (404 while the event type doesn't exist on cal.com yet),
                    and only after the round trip, ~5s in.
        So "it mounted" is the ready signal, which shows a working calendar
        immediately; we keep watching afterwards and pull the fallback back up
        if an error lands late. Cal's own "Error Code: 404" panel is hidden in
-       that state — the email address is the more useful thing to show. */
+       that state, since the email address is the more useful thing to show. */
     var failed = false;
     var noMountTimer;
     var stopWatchingTimer;

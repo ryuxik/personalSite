@@ -14,6 +14,19 @@
 import '@fontsource-variable/newsreader/wght.css';
 import '@fontsource-variable/newsreader/wght-italic.css';
 import '@fontsource-variable/archivo/wght.css';
+/**
+ * The two latin-subset variable faces that every page paints text with, imported
+ * for their *built* URLs so they can be preloaded. `?url` runs them through the
+ * same Vite asset pipeline the @font-face rules above use, so the href is the
+ * real fingerprinted /_astro/ path and stays correct across builds — a
+ * hardcoded hash would 404 the moment a font package updates.
+ *
+ * Only latin + only the upright weight axis: those are the files needed to
+ * paint the first screen. The italic and latin-ext subsets load on demand from
+ * the stylesheet, as they should.
+ */
+import newsreaderLatinUrl from '@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2?url';
+import archivoLatinUrl from '@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2?url';
 import '../styles/global.css';
 import { SITE } from '../config';
 
@@ -53,8 +66,20 @@ const hasHeadExtras = Astro.slots.has('head');
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#F1EEE5" />
+
+    {/* Icons. SVG first for anything modern; the PNG is the fallback, and
+        apple-touch-icon is what iOS uses when the site is added to the home screen. */}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
+
+    {/* Fonts the first paint needs. Both are self-hosted, so `crossorigin` is
+        still required: a preload without it fetches in a different CORS mode
+        than the @font-face request and the file is downloaded twice. */}
+    <link rel="preload" as="font" type="font/woff2" href={newsreaderLatinUrl} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={archivoLatinUrl} crossorigin />
 
     {
       /* Fallback metadata — superseded by <Seo /> once Agent D fills the "head" slot. */
@@ -126,8 +151,27 @@ const hasHeadExtras = Astro.slots.has('head');
       <p>
         <span>© 2026 {SITE.business}</span>
         <span class="site-footer__sep" aria-hidden="true">·</span>
+        <a href="/sessions/">Sessions</a>
+        <span class="site-footer__sep" aria-hidden="true">·</span>
+        <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
+        <span class="site-footer__sep" aria-hidden="true">·</span>
         <a href={SITE.instagram} rel="me noopener noreferrer" target="_blank">Instagram</a>
       </p>
     </footer>
+
+    {
+      /* Cloudflare Web Analytics. Cookieless, no personal data, ~1 request.
+         Emitted only when SITE.analyticsToken is set, so the default build ships
+         zero third-party script tags. The CSP in public/_headers already allows
+         static.cloudflareinsights.com so pasting a token needs no other change. */
+      SITE.analyticsToken && (
+        <script
+          is:inline
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon={`{"token": "${SITE.analyticsToken}"}`}
+        />
+      )
+    }
   </body>
 </html>
