@@ -2,8 +2,9 @@ export const SITE = {
   name: "RYUXIK",                        // wordmark/brand; the person behind it is below
   person: "Santiago Munoz",
   url: "https://ryuxik.io",
-  title: "Ryuxik — Photographer",
-  description: "Creative portraiture and photography sessions. Book time with me.",
+  business: "Ryuxik Photography",
+  title: "Ryuxik Photography · New York",
+  description: "Creative portraiture and photography sessions in New York. Book time with me.",
   email: "ryuxik@gmail.com",
   instagram: "https://www.instagram.com/santi7ago/",
   city: "New York, NY",
