@@ -53,6 +53,7 @@
  * Keys are POSIX-style paths relative to src/content/shoots, e.g.
  * "oaxaca-portraits/001.jpg" — src/lib/photos.ts looks entries up by that key.
  */
+import { createHash } from 'node:crypto';
 import { access, mkdir, readdir, readFile, rmdir, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -422,12 +423,33 @@ async function main() {
     }
 
     const cached = cache[key];
-    const stampMatches =
+    const entryUsable =
       cached?.source &&
-      cached.source.mtimeMs === stamp.mtimeMs &&
-      cached.source.size === stamp.size &&
       typeof cached.thumbhash === 'string' &&
       typeof cached.width === 'number';
+    let stampMatches =
+      entryUsable &&
+      cached.source.mtimeMs === stamp.mtimeMs &&
+      cached.source.size === stamp.size;
+
+    // Fresh-clone fallback: git does not preserve mtimes, so on CI every stamp
+    // misses even though the bytes (and the committed ladder files) are
+    // identical. When only the mtime differs, compare content hashes and adopt
+    // the new mtime instead of re-encoding the whole ladder.
+    if (!stampMatches && entryUsable && cached.source.size === stamp.size) {
+      const sha1 = createHash('sha1').update(await readFile(path)).digest('hex');
+      if (cached.source.sha1 === sha1) {
+        cached.source = { ...stamp, sha1 };
+        stampMatches = true;
+      } else if (!cached.source.sha1) {
+        // Old cache entries carry no hash — trust size match once, restamp with
+        // the hash so future clones take the fast path.
+        cached.source = { ...stamp, sha1 };
+        stampMatches = true;
+      }
+    } else if (stampMatches && !cached.source.sha1) {
+      cached.source.sha1 = createHash('sha1').update(await readFile(path)).digest('hex');
+    }
 
     if (stampMatches && (await ladderIntact(cached))) {
       photos[key] = cached;
@@ -438,6 +460,7 @@ async function main() {
 
     try {
       const buffer = await readFile(path);
+      stamp.sha1 = createHash('sha1').update(buffer).digest('hex');
       const metadata = await sharp(buffer).metadata();
       // The one true HDR test: libvips reports a gainMap field only for
       // gain-map JPEGs (ISO 21496-1 / Adobe HDR).

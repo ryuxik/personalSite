@@ -6,10 +6,8 @@ dist/
 .astro/
 
 # generated at predev/prebuild time by scripts/photo-meta.mjs + scripts/og-images.mjs
-src/generated/
 public/og/
 # the HDR/SDR delivery ladder — re-encoded from the masters by photo-meta.mjs
-public/photos/
 
 # Masters straight out of Lightroom: the HDR half (.avif) and the authored SDR
 # half (.sdr.jpg). scripts/convert-masters.mjs turns the pair into the gain-map
