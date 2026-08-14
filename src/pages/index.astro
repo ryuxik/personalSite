@@ -130,18 +130,12 @@ const STREAM_CTAS: Record<string, { eyebrow: string; text: string; href: string;
 <style>
   /*
    * Snap scrolling — Overview only (this style block ships with this page
-   * alone). Mandatory centre-snap gives the one-frame-per-screen gallery feel;
-   * momentum flicks still skip past multiple frames. Reduced-motion readers
-   * get the gentler proximity snap instead of the hard catch.
+   * alone). Proximity, deliberately: frames settle into centre when you stop
+   * near one, but the scroll never grips or fights you. Mandatory was tried
+   * and felt bossy.
    */
   :global(html) {
-    scroll-snap-type: y mandatory;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    :global(html) {
-      scroll-snap-type: y proximity;
-    }
+    scroll-snap-type: y proximity;
   }
 
   /* Editorial interstitial — caption-scale, hairline-framed, deliberately quiet.
