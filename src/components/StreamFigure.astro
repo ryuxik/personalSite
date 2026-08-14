@@ -48,15 +48,28 @@ const { images, caption } = entry;
  * The column itself is 1100px wide with a --gutter (max 2rem) each side and
  * goes edge-to-edge below 640px — see .column-wide.bleed in global.css.
  */
-const sizesFor = (image: StreamImage) => {
+const sizesFor = (image: StreamImage, share: number) => {
   const cap = `calc(86svh * ${(image.width / image.height).toFixed(4)})`;
-  return `(min-width: 1100px) min(1036px, ${cap}), (min-width: 640px) min(calc(100vw - 4rem), ${cap}), min(100vw, ${cap})`;
+  const s = share.toFixed(4);
+  // Below 640px pairs stack back to full width, so the last term ignores share.
+  return `(min-width: 1100px) min(calc(1036px * ${s}), ${cap}), (min-width: 640px) min(calc((100vw - 4rem) * ${s}), ${cap}), min(100vw, ${cap})`;
 };
 
-const frameStyle = (image: StreamImage) =>
+const ratio = (image: StreamImage) => image.width / image.height;
+
+/**
+ * A frame's inline style. `share` is its fraction of a diptych row (1 for a
+ * solo row): paired frames split the column proportionally to their aspect
+ * ratios so both render at exactly the same height. --r is consumed by the
+ * mobile stylesheet override that stacks pairs back to one-per-line.
+ */
+const frameStyle = (image: StreamImage, share: number) =>
   [
     `aspect-ratio: ${image.width} / ${image.height}`,
-    `width: min(100%, calc(86svh * ${(image.width / image.height).toFixed(4)}))`,
+    `--r: ${ratio(image).toFixed(4)}`,
+    share === 1
+      ? `width: min(100%, calc(86svh * var(--r)))`
+      : `width: min(calc((100% - var(--space-4)) * ${share.toFixed(4)}), calc(86svh * var(--r)))`,
     `background-color: ${image.color}`,
     image.thumbhash ? `background-image: url("${image.thumbhash}")` : null,
   ]
@@ -75,31 +88,58 @@ const frames = images.map((image, index) => {
     avifSrcset: srcsetFor(image.ladder, 'avif'),
   };
 });
+
+/**
+ * Diptych grouping: consecutive portrait/square frames (ratio <= 1.05) pair
+ * into one row at matched heights — a lone portrait column wastes the sides
+ * of the screen. Landscapes and unpaired frames keep the full line. The LCP
+ * frame always rides solo so its preload math stays simple.
+ */
+type Frame = (typeof frames)[number];
+const pairable = (f: Frame) => ratio(f.image) <= 1.05 && !f.isLcp;
+const rows: Frame[][] = [];
+for (let i = 0; i < frames.length; ) {
+  const a = frames[i];
+  const b = frames[i + 1];
+  if (b && pairable(a) && pairable(b)) {
+    rows.push([a, b]);
+    i += 2;
+  } else {
+    rows.push([a]);
+    i += 1;
+  }
+}
+const shareOf = (row: Frame[], f: Frame) =>
+  row.length === 1 ? 1 : ratio(f.image) / row.reduce((s, g) => s + ratio(g.image), 0);
 ---
 
 <figure class="shoot">
   {
-    frames.map(({ image, isLcp, fallback, jpegSrcset, avifSrcset }) => (
-      <div class:list={['frame', !isLcp && 'fade-up']} style={frameStyle(image)}>
-        <picture class="frame__picture">
-          <source
-            media="(dynamic-range: high)"
-            type="image/jpeg"
-            srcset={jpegSrcset}
-            sizes={sizesFor(image)}
-          />
-          <source type="image/avif" srcset={avifSrcset} sizes={sizesFor(image)} />
-          <img
-            src={fallback?.jpg}
-            width={fallback?.w}
-            height={fallback?.h}
-            alt={image.alt}
-            class="frame__img"
-            loading={isLcp ? 'eager' : 'lazy'}
-            decoding={isLcp ? 'sync' : 'async'}
-            fetchpriority={isLcp ? 'high' : undefined}
-          />
-        </picture>
+    rows.map((row) => (
+      <div class:list={['row', row.length === 2 && 'row--pair']}>
+        {row.map((f) => (
+          <div class:list={['frame', !f.isLcp && 'fade-up']} style={frameStyle(f.image, shareOf(row, f))}>
+            <picture class="frame__picture">
+              <source
+                media="(dynamic-range: high)"
+                type="image/jpeg"
+                srcset={f.jpegSrcset}
+                sizes={sizesFor(f.image, shareOf(row, f))}
+              />
+              <source type="image/avif" srcset={f.avifSrcset} sizes={sizesFor(f.image, shareOf(row, f))} />
+              <img
+                src={f.fallback?.jpg}
+                width={f.fallback?.w}
+                height={f.fallback?.h}
+                alt={f.image.alt}
+                class="frame__img"
+                loading={f.isLcp ? 'eager' : 'lazy'}
+                decoding={f.isLcp ? 'sync' : 'async'}
+                fetchpriority={f.isLcp ? 'high' : undefined}
+              />
+            </picture>
+          </div>
+        ))}
       </div>
     ))
   }
@@ -116,20 +156,39 @@ const frames = images.map((image, index) => {
     margin-top: clamp(3.5rem, 9vw, 6.5rem);
   }
 
-  .frame {
-    position: relative;
-    overflow: hidden;
-    /* aspect-ratio, width cap, average colour and thumbhash arrive inline */
-    margin-inline: auto;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
-    /* Each frame settles into the centre of the viewport as you scroll. */
+  /* A row is one line of the stream: a solo frame or a matched-height diptych.
+     It is also the scroll-snap unit, so pairs settle together. */
+  .row {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: var(--space-4);
     scroll-snap-align: center;
   }
 
-  .frame + .frame {
+  .row + .row {
     margin-top: var(--space-4);
+  }
+
+  .frame {
+    position: relative;
+    overflow: hidden;
+    /* aspect-ratio, width, average colour and thumbhash arrive inline */
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  @media (max-width: 640px) {
+    /* Half-width diptychs read stamp-sized on phones — stack them back. */
+    .row--pair {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .row--pair .frame {
+      width: min(100%, calc(86svh * var(--r))) !important;
+    }
   }
 
   .frame__picture {
