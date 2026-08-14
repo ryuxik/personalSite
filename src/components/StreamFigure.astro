@@ -39,14 +39,24 @@ const { entry, lead = false } = Astro.props;
 const { images, caption } = entry;
 
 /**
- * The stream column is 1100px wide with a --gutter (max 2rem) each side, and
+ * Every frame is capped at 86svh so no photograph exceeds the screen — tall
+ * portrait frames shrink-wrap (width follows from the aspect ratio) while
+ * landscape frames stay column-bound. The width is computed inline per frame:
+ *   width = min(full column, 86svh * aspect-ratio)
+ * which keeps the aspect-ratio box exact (zero CLS) with no JS.
+ *
+ * The column itself is 1100px wide with a --gutter (max 2rem) each side and
  * goes edge-to-edge below 640px — see .column-wide.bleed in global.css.
  */
-const SIZES = '(min-width: 1100px) 1036px, (min-width: 640px) calc(100vw - 4rem), 100vw';
+const sizesFor = (image: StreamImage) => {
+  const cap = `calc(86svh * ${(image.width / image.height).toFixed(4)})`;
+  return `(min-width: 1100px) min(1036px, ${cap}), (min-width: 640px) min(calc(100vw - 4rem), ${cap}), min(100vw, ${cap})`;
+};
 
 const frameStyle = (image: StreamImage) =>
   [
     `aspect-ratio: ${image.width} / ${image.height}`,
+    `width: min(100%, calc(86svh * ${(image.width / image.height).toFixed(4)}))`,
     `background-color: ${image.color}`,
     image.thumbhash ? `background-image: url("${image.thumbhash}")` : null,
   ]
@@ -72,8 +82,13 @@ const frames = images.map((image, index) => {
     frames.map(({ image, isLcp, fallback, jpegSrcset, avifSrcset }) => (
       <div class:list={['frame', !isLcp && 'fade-up']} style={frameStyle(image)}>
         <picture class="frame__picture">
-          <source media="(dynamic-range: high)" type="image/jpeg" srcset={jpegSrcset} sizes={SIZES} />
-          <source type="image/avif" srcset={avifSrcset} sizes={SIZES} />
+          <source
+            media="(dynamic-range: high)"
+            type="image/jpeg"
+            srcset={jpegSrcset}
+            sizes={sizesFor(image)}
+          />
+          <source type="image/avif" srcset={avifSrcset} sizes={sizesFor(image)} />
           <img
             src={fallback?.jpg}
             width={fallback?.w}
@@ -103,12 +118,14 @@ const frames = images.map((image, index) => {
 
   .frame {
     position: relative;
-    width: 100%;
     overflow: hidden;
-    /* aspect-ratio, average colour and the thumbhash arrive as inline styles */
+    /* aspect-ratio, width cap, average colour and thumbhash arrive inline */
+    margin-inline: auto;
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
+    /* Each frame settles into the centre of the viewport as you scroll. */
+    scroll-snap-align: center;
   }
 
   .frame + .frame {

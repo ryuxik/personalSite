@@ -128,8 +128,28 @@ const STREAM_CTAS: Record<string, { eyebrow: string; text: string; href: string;
 </BaseLayout>
 
 <style>
+  /*
+   * Snap scrolling — Overview only (this style block ships with this page
+   * alone). Mandatory centre-snap gives the one-frame-per-screen gallery feel;
+   * momentum flicks still skip past multiple frames. Reduced-motion readers
+   * get the gentler proximity snap instead of the hard catch.
+   */
+  :global(html) {
+    scroll-snap-type: y mandatory;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html) {
+      scroll-snap-type: y proximity;
+    }
+  }
+
   /* Editorial interstitial — caption-scale, hairline-framed, deliberately quiet.
      Inherits the stream's rhythm: it reads as a chapter break, not a banner. */
+  .stream-cta {
+    scroll-snap-align: center;
+  }
+
   .stream-cta {
     max-width: 32rem;
     margin: calc(var(--space-8) * 1.25) auto;
