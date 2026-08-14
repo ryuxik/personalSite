@@ -25,7 +25,7 @@ interface Props {
 
 const { title, description, bodyClass } = Astro.props;
 
-const pageTitle = title ? `${title} — ${SITE.name}` : SITE.title;
+const pageTitle = title ? `${title} · ${SITE.name}` : SITE.title;
 const pageDescription = description ?? SITE.description;
 
 // Trailing slash tolerant, so "/sessions" and "/sessions/" both mark active.
@@ -74,7 +74,7 @@ const hasHeadExtras = Astro.slots.has('head');
     <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="site-header">
-      <a class="wordmark" href="/" aria-label={`${SITE.name} — home`}>{SITE.name}</a>
+      <a class="wordmark" href="/" aria-label={`${SITE.name}, home`}>{SITE.name}</a>
 
       <nav class="nav nav--desktop" aria-label="Primary">
         <ul class="nav__list">
