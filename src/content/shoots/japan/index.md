@@ -1,4 +1,5 @@
 ---
+section: diary
 title: "Japan"
 subject: "Japan"
 context: personal

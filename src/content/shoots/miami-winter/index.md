@@ -1,4 +1,5 @@
 ---
+section: diary
 title: "Miami, winter"
 subject: "Miami"
 context: personal

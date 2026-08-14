@@ -38,7 +38,7 @@ import { SITE } from '../config';
 export const prerender = true;
 
 /** Site-relative page URLs, trailing slash to match what @astrojs/sitemap emits. */
-const PAGES = ['/', '/sessions/', '/information/'] as const;
+const PAGES = ['/', '/diary/', '/sessions/', '/information/'] as const;
 
 /** "{subject} for {client} · Mar '26" — the stream caption, verbatim. */
 function caption(data: { subject: string; client?: string; date: Date }): string {
@@ -56,7 +56,7 @@ const escapeXml = (value: string): string =>
 
 const absolute = (path: string): string => new URL(path, SITE.url).href;
 
-async function streamImages(): Promise<{ loc: string; title: string }[]> {
+async function streamImages(): Promise<{ loc: string; title: string; section: string }[]> {
   let shoots;
   try {
     shoots = await getCollection('shoots');
@@ -74,10 +74,11 @@ async function streamImages(): Promise<{ loc: string; title: string }[]> {
       a.id.localeCompare(b.id),
   );
 
-  const entries: { loc: string; title: string }[] = [];
+  const entries: { loc: string; title: string; section: string }[] = [];
 
   for (const shoot of ordered) {
     const title = caption(shoot.data);
+    const section = shoot.data.section;
 
     for (const key of getPhotoKeys(shoot.id)) {
       // Widest rung: the largest rendition that actually exists for this master.
@@ -86,7 +87,7 @@ async function streamImages(): Promise<{ loc: string; title: string }[]> {
         console.warn('[image-sitemap] no ladder for', key, '— run `npm run photo-meta`');
         continue;
       }
-      entries.push({ loc: absolute(widest.jpg), title });
+      entries.push({ loc: absolute(widest.jpg), title, section });
     }
   }
 
@@ -96,9 +97,10 @@ async function streamImages(): Promise<{ loc: string; title: string }[]> {
 export const GET: APIRoute = async () => {
   const images = await streamImages();
 
-  // Every stream image belongs to the Overview page; the other two pages carry no photos.
-  const byPage: Record<string, { loc: string; title: string }[]> = {
-    '/': images,
+  // Images live on the page whose stream renders them.
+  const byPage: Record<string, { loc: string; title: string; section?: string }[]> = {
+    '/': images.filter((image) => image.section === 'overview'),
+    '/diary/': images.filter((image) => image.section === 'diary'),
     '/sessions/': [],
     '/information/': [],
   };

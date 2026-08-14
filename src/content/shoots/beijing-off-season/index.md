@@ -1,4 +1,5 @@
 ---
+section: diary
 title: "Beijing, off-season"
 subject: "Beijing"
 context: personal

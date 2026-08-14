@@ -89,7 +89,26 @@ const portraitStyle = portrait
         )
       }
 
-      <p class="bio">Santiago Munoz. NYC based photographer.</p>
+      <div class="bio">
+        <p>
+          Portrait photography started, for me, with an absence. I had thousands of photographs
+          of places and of other people, and not one of myself. So I learned portraiture the
+          strange way: alone, on both sides of the camera, shooting self-portraits for a dating
+          profile. They worked. The first date those pictures got me became my life partner.
+        </p>
+        <p>
+          That experience is the whole philosophy. A good portrait is not a record of a face; it
+          is a story about a person, told well enough that they start to believe it themselves. I
+          photograph people as the heroes of their own stories, and the self-confidence tends to
+          follow the picture.
+        </p>
+        <p>
+          I work in New York and travel well. Sessions are built like small productions: idea
+          first, then location, styling, and light. Finished frames are mastered in true HDR, so
+          on a modern screen they look lit from within.
+          <a href="/sessions/">Sessions book online</a>; bigger ideas start with a free call.
+        </p>
+      </div>
     </div>
 
     <section class="contact" aria-labelledby="contact-heading">
@@ -141,8 +160,14 @@ const portraitStyle = portrait
   }
 
   .bio {
-    font-size: 1.12rem;
-    line-height: 1.75;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .bio p {
+    font-size: 1.08rem;
+    line-height: 1.72;
+    margin: 0 0 1rem;
   }
 
   @media (max-width: 640px) {

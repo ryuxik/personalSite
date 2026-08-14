@@ -1,4 +1,5 @@
 ---
+section: diary
 title: "Hangzhou & Nanjing"
 subject: "Hangzhou & Nanjing"
 context: personal

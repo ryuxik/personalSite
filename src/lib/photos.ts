@@ -250,10 +250,11 @@ export function getPhotoKeys(slug: string): string[] {
  * its single caption line. Shoots with no images yet are dropped rather than
  * rendered as a bare caption.
  */
-export async function getStream(): Promise<StreamEntry[]> {
+export async function getStream(section: 'overview' | 'diary' = 'overview'): Promise<StreamEntry[]> {
   const shoots = await getShoots();
 
   return shoots
+    .filter((shoot) => shoot.data.section === section)
     .map((shoot) => ({
       shoot,
       images: getShootImages(shoot),

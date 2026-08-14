@@ -14,7 +14,7 @@ import StreamFigure from '../components/StreamFigure.astro';
 import { getStream } from '../lib/photos';
 import { SITE } from '../config';
 
-const stream = await getStream();
+const stream = await getStream('overview');
 
 /**
  * Editorial interstitial CTAs, keyed by the shoot slug they follow. Three,
@@ -23,19 +23,19 @@ const stream = await getStream();
  * are just the door. More would turn the gallery into a carousel ad.
  */
 const STREAM_CTAS: Record<string, { eyebrow: string; text: string; href: string; label: string }> = {
-  'cat-study': {
-    eyebrow: 'Portraits, headshots, personal sessions',
-    text: 'Book a session like these. Fixed scope, on the calendar in two minutes.',
-    href: '/sessions/#book',
-    label: 'See open times',
-  },
-  japan: {
+  'gl-high-line': {
     eyebrow: 'Concept & editorial work',
     text: 'Have an idea that needs building? It starts with a free 20-minute consult.',
     href: '/sessions/#consult',
     label: 'Start a project',
   },
-  'medium-format-diary': {
+  'brooklyn-nights': {
+    eyebrow: 'Portraits, headshots, personal sessions',
+    text: 'Book a session like these. Fixed scope, on the calendar in two minutes.',
+    href: '/sessions/#book',
+    label: 'See open times',
+  },
+  'on-the-wall': {
     eyebrow: 'Work with me',
     text: 'New York based, travels well. Sessions, portraits, and commissioned projects.',
     href: '/sessions/',

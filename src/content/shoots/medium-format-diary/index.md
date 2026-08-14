@@ -1,4 +1,5 @@
 ---
+section: diary
 title: "Medium format diary"
 subject: "Film diary"
 context: personal

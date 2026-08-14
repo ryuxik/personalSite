@@ -1,0 +1,117 @@
+---
+/**
+ * Diary — travel, still life, film scans, and experiments. The personal work
+ * that used to dilute the Overview: the people-first stream sells sessions,
+ * this page holds everything else, in the same visual language.
+ *
+ * Same rendering mechanics as the Overview (StreamFigure, fade-up contract,
+ * HDR ladder markup). One quiet closing CTA instead of three.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Seo from '../components/Seo.astro';
+import StreamFigure from '../components/StreamFigure.astro';
+import { getStream } from '../lib/photos';
+
+const stream = await getStream('diary');
+---
+
+<BaseLayout>
+  <Seo
+    slot="head"
+    title="Diary"
+    description="Travel, still life, film scans, and experiments. The personal notebook of a New York portrait photographer."
+    ogImage="/og/diary.jpg"
+  />
+  <h1 class="visually-hidden">Diary: travel and personal work</h1>
+
+  <script is:inline>
+    (function () {
+      var root = document.documentElement;
+      if (!('IntersectionObserver' in window)) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      // Safari 26.0 to 26.3 silently drops an HDR <img> to SDR when opacity,
+      // transform or transitions apply to it or any ancestor, so on an HDR
+      // display there is no fade at all.
+      if (window.matchMedia && window.matchMedia('(dynamic-range: high)').matches) return;
+
+      root.classList.add('fade-up-ready');
+
+      function reveal() {
+        var targets = document.querySelectorAll('.fade-up');
+        if (!targets.length) {
+          root.classList.remove('fade-up-ready');
+          return;
+        }
+        var observer = new IntersectionObserver(
+          function (entries) {
+            for (var i = 0; i < entries.length; i += 1) {
+              if (!entries[i].isIntersecting) continue;
+              entries[i].target.classList.add('is-visible');
+              observer.unobserve(entries[i].target);
+            }
+          },
+          { rootMargin: '0px 0px -6% 0px', threshold: 0.04 },
+        );
+        for (var i = 0; i < targets.length; i += 1) observer.observe(targets[i]);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', reveal, { once: true });
+      } else {
+        reveal();
+      }
+    })();
+  </script>
+
+  <div class="column-wide bleed stream">
+    {stream.map((entry, index) => <StreamFigure entry={entry} lead={index === 0} />)}
+
+    {stream.length === 0 && <p class="faint">Nothing here yet.</p>}
+
+    {
+      stream.length > 0 && (
+        <aside class="stream-cta">
+          <span class="eyebrow">Work with me</span>
+          <p class="stream-cta__text">The portrait work lives on the Overview. Sessions book online.</p>
+          <a class="stream-cta__link" href="/sessions/">Sessions &amp; pricing &rarr;</a>
+        </aside>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  /* Same editorial interstitial treatment as the Overview's chapter breaks. */
+  .stream-cta {
+    max-width: 32rem;
+    margin: calc(var(--space-8) * 1.25) auto;
+    padding: var(--space-6) var(--gutter);
+    text-align: center;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .stream-cta__text {
+    font-family: var(--serif);
+    font-size: 1.12rem;
+    line-height: 1.55;
+    margin: var(--space-3) 0 var(--space-4);
+    text-wrap: balance;
+  }
+
+  .stream-cta__link {
+    font-family: var(--grotesque);
+    font-size: 0.76rem;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    padding-bottom: 2px;
+  }
+
+  .stream-cta__link:hover,
+  .stream-cta__link:focus-visible {
+    border-bottom-color: var(--accent);
+  }
+</style>

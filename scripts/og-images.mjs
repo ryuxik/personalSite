@@ -3,7 +3,7 @@
  * scripts/og-images.mjs — social card generator. Owned by Agent D.
  * Runs at `predev` / `prebuild`, after scripts/photo-meta.mjs (see package.json § generate).
  *
- * Emits 1200×630 JPEGs → public/og/{home,sessions,information}.jpg
+ * Emits 1200×630 JPEGs → public/og/{home,sessions,information,diary}.jpg
  * and the app icons → public/{apple-touch-icon.png,icon-512.png,favicon.svg}
  *
  *   pinned:      each page names its own source frame in PAGE_SOURCES below. The
@@ -61,6 +61,7 @@ const PAGE_SOURCES = {
   home: 'src/content/shoots/fashion-dq/001.jpg',
   sessions: 'src/content/shoots/vp/001.jpg',
   information: 'src/content/shoots/prism-self-portraits/002.jpg',
+  diary: 'src/content/shoots/hangzhou-nanjing/001.jpg',
 };
 
 const WIDTH = 1200;
@@ -431,7 +432,7 @@ const exists = async (path) => {
 
 /* ------------------------------------------------------------------ main ---- */
 
-const PAGES = ['home', 'sessions', 'information'];
+const PAGES = ['home', 'sessions', 'information', 'diary'];
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });

@@ -1,4 +1,5 @@
 ---
+section: diary
 title: "Garden, first light"
 subject: "Garden macros"
 context: personal

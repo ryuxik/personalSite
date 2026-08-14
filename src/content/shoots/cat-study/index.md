@@ -1,4 +1,5 @@
 ---
+section: diary
 title: "Cat study · Mumu & Guava"
 subject: "Mumu & Guava"
 context: personal

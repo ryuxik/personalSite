@@ -23,6 +23,9 @@ const shoots = defineCollection({
     genre: z.enum(['portraiture', 'street', 'landscape', 'events', 'other']),
     cover: z.string(),
     featured: z.number().default(0),
+    // Which gallery the shoot lives in: the people-first Overview (default) or
+    // the Diary of travel, still life, and experiments (/diary).
+    section: z.enum(['overview', 'diary']).default('overview'),
     // Per-image alt text, keyed by bare filename ("001.jpg"). Optional and partial:
     // src/lib/photos.ts prefers alts[file] and falls back to a derived string for any
     // frame that has no entry yet, so a half-written map never breaks the stream.
