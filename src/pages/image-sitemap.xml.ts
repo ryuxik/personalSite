@@ -109,7 +109,6 @@ export const GET: APIRoute = async () => {
         (image) =>
           `    <image:image>\n` +
           `      <image:loc>${escapeXml(image.loc)}</image:loc>\n` +
-          `      <image:title>${escapeXml(image.title)}</image:title>\n` +
           `    </image:image>`,
       )
       .join('\n');

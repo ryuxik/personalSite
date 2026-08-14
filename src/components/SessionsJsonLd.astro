@@ -1,7 +1,9 @@
 ---
 /**
- * SessionsJsonLd — schema.org ProfessionalService + one Service per session tier,
- * plus the FAQPage for the six questions rendered on the page.
+ * SessionsJsonLd — schema.org LocalBusiness + one Service per session tier.
+ * LocalBusiness, not ProfessionalService: that type was deprecated by schema.org and
+ * was never in Google's supported set. No FAQPage: Google removed FAQ rich results
+ * in May 2026 and controlled studies show schema does not drive AI citation.
  * Owned by Agent D; belongs on /sessions only.
  *
  *   <SessionsJsonLd slot="head" />
@@ -36,15 +38,8 @@ interface ServiceTier {
   price: number;
 }
 
-interface FaqItem {
-  q: string;
-  /** Plain text. The first paragraph of the matching <Faq> on the page. */
-  a: string;
-}
-
 interface Props {
   services?: ServiceTier[];
-  faqs?: FaqItem[];
 }
 
 // Names, prices and scope must match the tier cards Agent C renders on /sessions.
@@ -73,40 +68,12 @@ const DEFAULT_SERVICES: ServiceTier[] = [
 ];
 
 // One entry per <Faq> in src/pages/sessions.astro, in page order.
-const DEFAULT_FAQS: FaqItem[] = [
-  {
-    q: 'How long until I get my photos?',
-    a: 'Headshots come back within a week. Portrait sessions take about two, and half-day projects up to three. Either way, a small preview reaches you inside 48 hours so you have something to use right away.',
-  },
-  {
-    q: 'What am I allowed to do with the images?',
-    a: 'Print them, post them, put them on your website. Personal use is all included. If the images are going to sell something (ads, packaging, paid campaigns), that’s a commercial license and I quote it per project.',
-  },
-  {
-    q: 'Do you travel?',
-    a: 'I’m based in New York, and anywhere in the five boroughs is included. Past about an hour out I add a travel fee. Multi-day and out-of-state work gets quoted with travel and lodging built in.',
-  },
-  {
-    q: 'What happens if the weather turns?',
-    a: 'Overcast is actually good news: soft light, no squinting. We only move the shoot when the weather makes the work impossible, think heavy rain or lightning. I make that call with you the morning of, and we pick the next date that works for both of us. No fee.',
-  },
-  {
-    q: 'Can I reschedule or cancel?',
-    a: 'Your date is held by a non-refundable retainer: $150 for standard sessions, half the total for bigger projects. It counts toward your balance. Give me 48 hours and the retainer moves with you. The first move is free, after that each one is $100.',
-  },
-  {
-    q: 'What should I wear?',
-    a: 'Solid colors and simple shapes photograph best. The two most common regrets are busy patterns and a haircut from the day before. Bring two or three options on hangers and we’ll pick together.',
-  },
-];
-
-const { services = DEFAULT_SERVICES, faqs = DEFAULT_FAQS } = Astro.props;
+const { services = DEFAULT_SERVICES } = Astro.props;
 
 const titleCased = SITE.name.charAt(0) + SITE.name.slice(1).toLowerCase();
 
 const BUSINESS_ID = `${SITE.url}/sessions/#business`;
 const PERSON_ID = `${SITE.url}/#person`;
-const FAQ_ID = `${SITE.url}/sessions/#faq-schema`;
 const SESSIONS_URL = `${SITE.url}/sessions/`;
 
 const city = SITE.city.trim();
@@ -148,7 +115,7 @@ const offerFor = (tier: ServiceTier) => ({
 });
 
 const business = {
-  '@type': 'ProfessionalService',
+  '@type': 'LocalBusiness',
   '@id': BUSINESS_ID,
   name: `${titleCased} Photography`,
   url: SESSIONS_URL,
@@ -168,23 +135,9 @@ const business = {
   },
 };
 
-const faqPage = {
-  '@type': 'FAQPage',
-  '@id': FAQ_ID,
-  name: 'Before you book',
-  url: `${SITE.url}/sessions/#faq`,
-  about: { '@id': BUSINESS_ID },
-  mainEntity: faqs.map((item, index) => ({
-    '@type': 'Question',
-    '@id': `${SITE.url}/sessions/#faq-${index + 1}`,
-    name: item.q,
-    acceptedAnswer: { '@type': 'Answer', text: item.a },
-  })),
-};
-
 const graph = {
   '@context': 'https://schema.org',
-  '@graph': [business, ...serviceNodes, faqPage],
+  '@graph': [business, ...serviceNodes],
 };
 
 // Escape "<" so a stray "</script>" inside any string can never close this block early.
