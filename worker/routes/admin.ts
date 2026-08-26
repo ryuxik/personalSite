@@ -31,6 +31,10 @@ import {
 import { newAccessKey, slugify, keyEquals } from '../lib/keys';
 import { esc, page, json } from '../lib/html';
 import { markDeleted } from '../cron';
+import { crc32 as crc32Of, hasIsoGainMap } from '../lib/bytes';
+// Pure-JS EXIF parsing (works on HEIC and JPEG) — the GPS gate now lives in
+// the WORKER so browser ingest is held to the same standard as the CLI.
+import ExifReader from 'exifreader';
 
 /** Fixed kinds plus l<width>/a<width> ladder rungs — widths are dynamic since
  * a narrow master contributes its own width as the top rung (photo-meta rule). */
@@ -100,7 +104,7 @@ export async function handleAdmin(request: Request, env: Env, path: string[]): P
   // The admin UI's own static files live under /admin/* which run_worker_first
   // routes here — hand anything file-shaped straight back to the asset layer
   // (they are public css/js; Access gates them in production).
-  if (path[0] === 'admin' && path.length === 2 && /\.[a-z0-9]+$/i.test(path[1]))
+  if (path[0] === 'admin' && path.length >= 2 && /\.[a-z0-9]+$/i.test(path[path.length - 1]))
     return env.ASSETS.fetch(request);
 
   // Session bootstrap: POST form, never a query string.
@@ -180,6 +184,15 @@ async function createGallery(request: Request, env: Env): Promise<Response> {
 async function patchGallery(request: Request, env: Env, gallery: GalleryRow): Promise<Response> {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const db = env.DB;
+  if (typeof body.title === 'string' && body.title.trim()) {
+    await db.prepare('UPDATE galleries SET title = ? WHERE id = ?')
+      .bind(body.title.trim().slice(0, 120), gallery.id).run();
+    await logEvent(db, gallery.id, 'renamed', body.title.trim().slice(0, 120));
+  }
+  if (typeof body.client === 'string') {
+    await db.prepare('UPDATE galleries SET client_name = ? WHERE id = ?')
+      .bind(body.client.trim().slice(0, 120), gallery.id).run();
+  }
   if (body.status === 'live' || body.status === 'draft') {
     if (gallery.status === 'deleted') {
       // Logical deletion makes restore-within-grace a real feature — but a
@@ -285,6 +298,41 @@ async function upload(request: Request, env: Env, gallery: GalleryRow): Promise<
     return json({ error: 'thumbhash must be a png data URI' }, 400);
   if (!request.body) return json({ error: 'empty body' }, 400);
 
+  // Buffer for verification (largest masters are ~50MB; isolate limit 128MB).
+  if (bytes > 120 * 1024 * 1024) return json({ error: 'file too large' }, 413);
+  const payload = new Uint8Array(await request.arrayBuffer());
+  if (payload.byteLength !== bytes)
+    return json({ error: `size mismatch: declared ${bytes}, received ${payload.byteLength}` }, 400);
+  if (crc32Of(payload) !== (crc32 >>> 0))
+    return json({ error: 'crc mismatch — upload corrupted in transit' }, 400);
+
+  // GPS gate, fail-closed (server-side so EVERY ingest path is covered):
+  // refusing is recoverable; publishing a client's location is not.
+  const gpsGated = ['original', 'instagram', 'rednote', 'preview'].includes(kind);
+  if (gpsGated && q.get('allow_gps') !== '1') {
+    let verdict = 'unreadable';
+    try {
+      const tags = ExifReader.load(payload.buffer as ArrayBuffer);
+      verdict = Object.keys(tags).some((k) =>
+        /^GPS(Latitude|Longitude|Position|DestLatitude|DestLongitude|Altitude)$/i.test(k)
+      ) ? 'gps' : 'clean';
+    } catch {
+      verdict = 'unreadable';
+    }
+    if (verdict !== 'clean')
+      return json({
+        error: verdict === 'gps'
+          ? `${kind} carries GPS metadata — re-export without location, or pass allow_gps=1`
+          : `${kind} metadata unreadable, so GPS cannot be ruled out (gate fails closed) — pass allow_gps=1 to override`,
+      }, 422);
+  }
+
+  // Gain-map gate: the preview and every jpg rung must carry the ISO 21496-1
+  // map (else Chrome shows SDR) — unless the shoot is declared SDR.
+  const hdrGated = kind === 'preview' || /^l\d+$/.test(kind);
+  if (hdrGated && q.get('sdr') !== '1' && q.get('is_hdr') !== '0' && !hasIsoGainMap(payload))
+    return json({ error: `${kind} has no ISO 21496-1 gain map — Chrome would render SDR. Pass sdr=1 only for a genuinely SDR shoot.` }, 422);
+
   let photo = await env.DB.prepare('SELECT * FROM photos WHERE gallery_id = ? AND stem = ?')
     .bind(gallery.id, stem)
     .first<PhotoRow>();
@@ -334,17 +382,8 @@ async function upload(request: Request, env: Env, gallery: GalleryRow): Promise<
   }
 
   const r2Key = `galleries/${gallery.id}/${photo.id}/v${photo.version}/${kind}`;
-  await env.MEDIA.put(r2Key, request.body, { httpMetadata: { contentType } });
-  // Verify what actually landed: a truncated PUT stored with the declared
-  // byte count would corrupt every zip built from it.
-  const stored = await env.MEDIA.head(r2Key);
-  if (!stored || stored.size !== bytes) {
-    await env.MEDIA.delete(r2Key);
-    return json(
-      { error: `size mismatch: declared ${bytes}, stored ${stored?.size ?? 'nothing'} — upload rejected` },
-      400
-    );
-  }
+  // The buffer was already size- and CRC-verified above; store it verbatim.
+  await env.MEDIA.put(r2Key, payload, { httpMetadata: { contentType } });
   await env.DB.prepare(
     `INSERT INTO assets (photo_id, kind, version, r2_key, bytes, crc32, content_type, width, height, filename)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -485,7 +524,7 @@ function adminHome(): Response {
   </section>
   <section id="galleries" class="panel"><h2>Galleries</h2><div id="list">Loading…</div></section>
 </main>
-<script src="/admin/admin.js" defer></script>`
+<script type="module" src="/admin/admin.js"></script>`
   );
 }
 
@@ -502,11 +541,12 @@ async function adminGallery(env: Env, id: number): Promise<Response> {
     <p class="ahead__sub" id="summary"></p>
   </header>
   <section class="panel" id="share"><h2>Share</h2><div id="share-body"></div></section>
+  <section class="panel" id="ingest"><h2>Add photos</h2><div id="ingest-body"></div></section>
   <section class="panel" id="matrix"><h2>Coverage</h2><div id="matrix-body">Loading…</div></section>
   <section class="panel" id="marks"><h2>Marks</h2><div id="marks-body"></div></section>
   <section class="panel" id="threads"><h2>Feedback</h2><div id="threads-body"></div></section>
   <section class="panel" id="lifecycle"><h2>Lifecycle</h2><div id="lifecycle-body"></div></section>
 </main>
-<script src="/admin/admin.js" defer></script>`
+<script type="module" src="/admin/admin.js"></script>`
   );
 }

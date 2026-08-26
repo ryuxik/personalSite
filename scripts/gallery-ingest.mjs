@@ -111,6 +111,13 @@ for (const name of names) {
   else if ((m = lower.match(/^(.+)-instagram\.heic$/))) put(m[1], 'instagram', name);
   else if ((m = lower.match(/^(.+)-rednote\.heic$/))) put(m[1], 'rednote', name);
   else if ((m = lower.match(/^(.+)-web\.jpe?g$/))) put(m[1], 'preview', name);
+  else if ((m = lower.match(/^(.+)-w(\d+)\.jpe?g$/))) {
+    if (!sets.has(m[1])) sets.set(m[1], {});
+    (sets.get(m[1]).rungJpg ??= {})[Number(m[2])] = join(dir, name);
+  } else if ((m = lower.match(/^(.+)-w(\d+)\.avif$/))) {
+    if (!sets.has(m[1])) sets.set(m[1], {});
+    (sets.get(m[1]).rungAvif ??= {})[Number(m[2])] = join(dir, name);
+  }
   else if ((m = lower.match(/^(.+)\.heic$/))) { if (!sets.get(m[1])?.original) put(m[1], 'original', name); }
 }
 if (sets.size === 0) {
@@ -216,6 +223,8 @@ async function uploadBuffer(stem, kind, buffer, contentType, filename, extra = {
     crc32: String(crcOf(buffer)),
     content_type: contentType,
     filename,
+    ...(flags.get('sdr') ? { sdr: '1' } : {}),
+    ...(flags.get('allow-gps') ? { allow_gps: '1' } : {}),
     ...Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, String(v)])),
   });
   await api(`/api/admin/galleries/${gallery.id}/upload?${params}`, { method: 'PUT', body: buffer });
@@ -275,7 +284,11 @@ for (const stem of stems) {
     thumbhash: await thumbhashDataUri(set.previewBuffer),
     color: await averageColor(set.previewBuffer),
   };
-  const widths = ladderWidths(set.width);
+  // Grain Studio's web set ships the rungs pre-authored (encoded from the
+  // master pixels — better than any resize here); derive only for folders
+  // from older exports.
+  const authoredWidths = set.rungJpg ? Object.keys(set.rungJpg).map(Number).sort((a, b) => a - b) : null;
+  const widths = authoredWidths ?? ladderWidths(set.width);
 
   let newVersion = false;
   let heal = false;
@@ -306,7 +319,14 @@ for (const stem of stems) {
   const previewChanged = !heal || !matches(server?.assets?.preview, set.previewBuffer);
   if (previewChanged) work.push(['preview', set.previewBuffer, CT.jpg, `${stem}-web.jpg`, {}]);
   for (const width of widths) {
-    if (previewChanged || !server?.assets?.[`l${width}`] || !server?.assets?.[`a${width}`]) {
+    if (authoredWidths) {
+      const jb = await readFile(set.rungJpg[width]);
+      if (need(`l${width}`, jb)) work.push([`l${width}`, jb, CT.jpg, `${stem}-${width}.jpg`, {}]);
+      if (set.rungAvif?.[width]) {
+        const ab = await readFile(set.rungAvif[width]);
+        if (need(`a${width}`, ab)) work.push([`a${width}`, ab, CT.avif, `${stem}-${width}.avif`, {}]);
+      }
+    } else if (previewChanged || !server?.assets?.[`l${width}`] || !server?.assets?.[`a${width}`]) {
       const { jpg, avif } = await deriveRungs(set, width);
       work.push([`l${width}`, jpg.data, CT.jpg, `${stem}-${width}.jpg`, { asset_width: jpg.info.width, asset_height: jpg.info.height }]);
       work.push([`a${width}`, avif.data, CT.avif, `${stem}-${width}.avif`, { asset_width: avif.info.width, asset_height: avif.info.height }]);

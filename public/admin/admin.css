@@ -81,3 +81,14 @@ table.matrix { border-collapse: collapse; width: 100%; font-variant-numeric: tab
 
 .life-row { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.75rem; }
 .muted { color: var(--ink-faint); font-size: 0.8125rem; }
+
+/* browser ingest (2026-08-26) */
+.drop { border: 1.5px dashed var(--line); border-radius: 6px; padding: 1.1rem 1.2rem; }
+.drop.over { border-color: var(--accent); background: #1A1A22; }
+.drop p { margin: 0 0 0.75rem; color: var(--ink-soft); }
+.chk { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--ink-soft); font-size: 0.8125rem; }
+.chk input { width: auto; max-width: none; margin: 0; }
+#ing-status ul { margin: 0.5rem 0 0; padding-left: 1.2rem; }
+#ing-status .ok { color: var(--good); }
+#ing-status .miss { color: var(--warn); }
+.linklike { background: none; border: none; padding: 0; color: var(--accent); font: inherit; font-size: 0.8125rem; cursor: pointer; text-decoration: underline; text-underline-offset: 0.15em; }

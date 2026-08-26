@@ -31,7 +31,7 @@ interface R2Bucket {
   head(key: string): Promise<R2ObjectHead | null>;
   put(
     key: string,
-    value: ReadableStream | ArrayBuffer | string,
+    value: ReadableStream | ArrayBuffer | ArrayBufferView | string,
     options?: { httpMetadata?: { contentType?: string } }
   ): Promise<unknown>;
   delete(key: string | string[]): Promise<void>;

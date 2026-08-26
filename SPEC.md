@@ -412,7 +412,18 @@ identical tombstone. Clients have no accounts: a name chip (localStorage) attrib
 marks and comments. Viewer names persist in the records (marks, threads, events) — an
 erasure request means deleting those rows by hand.
 
-**Ingest is local and the server never decodes an image.** Verified 2026-08-26:
+**Two ingest paths, and the server never decodes an image.** Browser: the admin
+gallery page has an Add Photos drop zone — pair a Grain Studio export folder in
+the page, integrity (CRC32) and metadata computed client-side, files PUT to the
+same upload API; Grain Studio's "Web preview" row now emits the full web set
+(preview + `-w{width}.jpg` gain-map rungs with `.avif` twins), so nothing is
+derived outside Grain Studio. CLI (`scripts/gallery-ingest.mjs` / the `deliver`
+shell function): same protocol, uses authored rungs when present, still derives
+them for pre-web-set folders; the faster choice for multi-GB shoots. The GPS
+gate (fail-closed), gain-map gate, size and CRC verification all run IN THE
+WORKER on every upload, so both paths are held to one standard.
+
+**The historical constraint that shaped this:** Verified 2026-08-26:
 nothing server-side turns HEIC HDR into a gain-map JPEG (sharp/libvips prebuilts have
 no HEIC; libheif can't read Apple gain maps; Apple's ImageIO writes no ISO JPEG — and
 toGainMapHDR -j emits the Apple scheme, which Chrome/sharp read as SDR). So Grain
