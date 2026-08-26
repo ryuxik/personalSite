@@ -2,29 +2,24 @@
  * (mirrored from src/styles/global.css), denser layout: this page is scanned
  * and operated, not read. */
 /* Self-hosted variable fonts (SPEC hard rule: no runtime font/CDN deps) —
- * the same @fontsource-variable files the Astro site bundles, latin subset. */
+ * the F5 system: Bricolage Grotesque (voice) + Geist Mono (apparatus). */
 @font-face {
-  font-family: "Newsreader";
-  src: url("/gallery/fonts/newsreader-latin-wght-normal.woff2") format("woff2-variations");
-  font-style: normal; font-weight: 200 800; font-display: swap;
+  font-family: "Bricolage Grotesque";
+  src: url("/gallery/fonts/bricolage-grotesque-latin-standard-normal.woff2") format("woff2-variations");
+  font-style: normal; font-weight: 200 800; font-stretch: 75% 100%; font-display: swap;
 }
 @font-face {
-  font-family: "Newsreader";
-  src: url("/gallery/fonts/newsreader-latin-wght-italic.woff2") format("woff2-variations");
-  font-style: italic; font-weight: 200 800; font-display: swap;
-}
-@font-face {
-  font-family: "Archivo";
-  src: url("/gallery/fonts/archivo-latin-wght-normal.woff2") format("woff2-variations");
+  font-family: "Geist Mono";
+  src: url("/gallery/fonts/geist-mono-latin-wght-normal.woff2") format("woff2-variations");
   font-style: normal; font-weight: 100 900; font-display: swap;
 }
 
 :root {
-  --paper: #F1EEE5; --ink: #33291E; --ink-soft: #6E5D4A; --ink-faint: #94846F;
-  --line: #DAD3C4; --card: #EAE6DA; --accent: #7A4A2B;
-  --good: #4A6741; --warn: #8A5A2B;
-  --serif: "Newsreader", Georgia, serif;
-  --grotesque: "Archivo", Helvetica, Arial, sans-serif;
+  --paper: #101014; --ink: #EFEFED; --ink-soft: #B6B6BC; --ink-faint: #83838B;
+  --line: #232330; --card: #17171C; --accent: #D8FF3D;
+  --good: #7ED87E; --warn: #FFB35C;
+  --serif: "Bricolage Grotesque", Helvetica, Arial, sans-serif;
+  --grotesque: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -33,7 +28,7 @@ a { color: var(--accent); }
 button { font: inherit; cursor: pointer; }
 
 .admin { max-width: 980px; margin: 0 auto; padding: 2.5rem clamp(1rem, 4vw, 2rem) 6rem; }
-.ahead h1 { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 2rem; margin: 0.25rem 0; }
+.ahead h1 { font-family: var(--serif); font-weight: 750; font-variation-settings: "wdth" 87; letter-spacing: -0.022em; font-size: 2rem; margin: 0.25rem 0; }
 .ahead__sub { color: var(--ink-faint); font-size: 0.8125rem; margin: 0; }
 .ahead p a { text-decoration: none; }
 
@@ -41,16 +36,16 @@ button { font: inherit; cursor: pointer; }
 .panel h2 { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 0.9rem; }
 
 form label { display: block; margin-bottom: 0.8rem; font-size: 0.8125rem; color: var(--ink-soft); }
-input { font: inherit; padding: 0.45rem 0.6rem; border: 1px solid var(--line); border-radius: 4px; background: #fff; color: var(--ink); width: 100%; max-width: 26rem; margin-top: 0.25rem; }
+input { font: inherit; padding: 0.45rem 0.6rem; border: 1px solid var(--line); border-radius: 4px; background: #0B0B0E; color: var(--ink); width: 100%; max-width: 26rem; margin-top: 0.25rem; }
 input[type="number"] { max-width: 6rem; }
 textarea { font: inherit; width: 100%; border: 1px solid var(--line); border-radius: 4px; padding: 0.5rem; }
-.btn { font-weight: 600; font-size: 0.8125rem; letter-spacing: 0.04em; padding: 0.55rem 1rem; border-radius: 4px; border: none; background: var(--accent); color: var(--paper); }
+.btn { font-weight: 600; font-size: 0.8125rem; letter-spacing: 0.04em; padding: 0.55rem 1rem; border-radius: 4px; border: none; background: var(--accent); color: #101014; }
 .btn--quiet { background: none; border: 1px solid var(--line); color: var(--ink-soft); }
 .btn--danger { background: none; border: 1px solid var(--warn); color: var(--warn); }
 
 .gcard { display: flex; align-items: baseline; gap: 1rem; padding: 0.8rem 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .gcard:first-child { border-top: none; }
-.gcard a { font-family: var(--serif); font-style: italic; font-size: 1.15rem; text-decoration: none; color: var(--ink); }
+.gcard a { font-family: var(--serif); font-weight: 700; font-variation-settings: "wdth" 87; letter-spacing: -0.015em; font-size: 1.1rem; text-decoration: none; color: var(--ink); }
 .gcard a:hover { color: var(--accent); }
 .gcard .meta { color: var(--ink-faint); font-size: 0.8125rem; }
 .chip { display: inline-block; border: 1px solid var(--line); border-radius: 99px; padding: 0.1rem 0.6rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
@@ -78,7 +73,7 @@ table.matrix { border-collapse: collapse; width: 100%; font-variant-numeric: tab
 .thread li:first-child { border-top: none; }
 .thread .who { font-size: 0.75rem; font-weight: 600; color: var(--ink-faint); margin: 0 0 0.15rem; }
 .thread .who .stem { color: var(--accent); }
-.thread .what { margin: 0 0 0.4rem; font-family: var(--serif); font-size: 0.975rem; }
+.thread .what { margin: 0 0 0.4rem; font-family: var(--serif); font-weight: 440; font-size: 0.975rem; }
 .thread .ops { display: flex; gap: 0.75rem; }
 .thread .ops button { background: none; border: none; padding: 0; color: var(--ink-faint); font-size: 0.8125rem; }
 .thread .ops button:hover { color: var(--accent); }

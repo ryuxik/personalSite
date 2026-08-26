@@ -18,18 +18,22 @@
 /* --- 1. Tokens ---------------------------------------------------------- */
 
 :root {
-  /* Palette — from the approved plan */
-  --paper:     #F1EEE5;  /* page ground — warm bone */
-  --ink:       #33291E;  /* warm near-black text */
-  --ink-soft:  #6E5D4A;  /* secondary text */
-  --ink-faint: #94846F;  /* captions, datelines */
-  --line:      #DAD3C4;  /* hairlines, borders */
-  --card:      #EAE6DA;  /* raised surfaces */
-  --accent:    #7A4A2B;  /* links, active nav, CTAs — deep sepia */
+  /* Palette — "F5 · Spiky" redesign (owner-directed, 2026-08-26): ink-dark
+     ground, acid accent. Token NAMES kept from the original system so every
+     component keeps working — --paper is now the dark ground, --serif is now
+     the display grotesque. HDR frames burn brightest on exactly this ground. */
+  --paper:     #101014;  /* page ground — ink dark */
+  --ink:       #EFEFED;  /* near-white text */
+  --ink-soft:  #B6B6BC;  /* secondary text */
+  --ink-faint: #83838B;  /* captions, datelines — 5.2:1 on --paper */
+  --line:      #232330;  /* hairlines, borders */
+  --card:      #17171C;  /* raised surfaces */
+  --accent:    #D8FF3D;  /* links, active nav, CTAs — acid */
 
-  /* Type stacks */
-  --serif: "Newsreader Variable", Newsreader, Georgia, "Times New Roman", serif;
-  --grotesque: "Archivo Variable", Archivo, Helvetica, Arial, sans-serif;
+  /* Type stacks — Bricolage Grotesque (voice: sharp cuts, human quirk; opsz
+     handles display vs text automatically) + Geist Mono (all apparatus). */
+  --serif: "Bricolage Grotesque Variable", "Bricolage Grotesque", Helvetica, Arial, sans-serif;
+  --grotesque: "Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Measure + rhythm */
   --measure: 66ch;
@@ -48,11 +52,11 @@
   --space-8: 4.5rem;
   --space-9: 6.5rem;
 
-  /* Label / nav treatment */
-  --tracking-label: 0.16em;
-  --tracking-wordmark: 0.34em;
+  /* Label / nav treatment — mono is naturally wide; keep tracking tight */
+  --tracking-label: 0.07em;
+  --tracking-wordmark: 0em;
 
-  color-scheme: light only;
+  color-scheme: dark;
 }
 
 /* --- 2. Reset ----------------------------------------------------------- */
@@ -121,9 +125,9 @@ body {
   background-color: var(--paper);
   color: var(--ink);
   font-family: var(--serif);
-  font-size: 1.04rem;
-  line-height: 1.72;
-  font-weight: 400;
+  font-size: 1.02rem;
+  line-height: 1.62;
+  font-weight: 420;
   font-synthesis-weight: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -134,15 +138,16 @@ body {
 
 h1, h2, h3, h4 {
   font-family: var(--serif);
-  font-weight: 400;
-  line-height: 1.18;
+  font-weight: 740;
+  font-variation-settings: "wdth" 87;
+  line-height: 1.04;
+  letter-spacing: -0.022em;
   text-wrap: balance;
   color: var(--ink);
 }
 
 h1 {
-  font-size: clamp(1.9rem, 1.35rem + 2.1vw, 2.5rem);
-  letter-spacing: -0.008em;
+  font-size: clamp(2.1rem, 1.45rem + 2.6vw, 2.9rem);
 }
 
 h2 {
@@ -426,13 +431,11 @@ figcaption {
 }
 
 .wordmark {
-  font-family: var(--grotesque);
-  font-size: 0.95rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wordmark);
-  /* letterspacing adds trailing space; pull it back so the mark optically aligns */
-  margin-right: calc(var(--tracking-wordmark) * -1);
+  font-family: var(--serif);
+  font-size: 1.08rem;
+  font-weight: 800;
+  font-variation-settings: "wdth" 87;
+  letter-spacing: -0.015em;
   color: var(--ink);
   text-decoration: none;
   white-space: nowrap;

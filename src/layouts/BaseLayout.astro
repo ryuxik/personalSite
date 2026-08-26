@@ -11,9 +11,8 @@
  * <Seo /> component lands, pages pass their metadata through that instead and
  * the fallback tags below are skipped whenever the "head" slot is filled.
  */
-import '@fontsource-variable/newsreader/wght.css';
-import '@fontsource-variable/newsreader/wght-italic.css';
-import '@fontsource-variable/archivo/wght.css';
+import '@fontsource-variable/bricolage-grotesque/standard.css'; // opsz+wdth+wght
+import '@fontsource-variable/geist-mono/wght.css';
 import '../styles/global.css';
 import { SITE } from '../config';
 
@@ -52,7 +51,7 @@ const hasHeadExtras = Astro.slots.has('head');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
-    <meta name="theme-color" content="#F1EEE5" />
+    <meta name="theme-color" content="#101014" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
 

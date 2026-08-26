@@ -31,27 +31,38 @@ down. Static Astro 7 site deployed to Cloudflare Pages. Running cost target: $0/
 - Placeholder user data is always marked `TODO(ryu):` in a comment or visibly in copy.
 - Commit nothing; the coordinator handles git.
 
-## Design tokens (from the approved plan)
+## Design tokens ("F5 · Spiky" redesign, owner-directed 2026-08-26)
+
+Santiago rejected the original bone/sepia + Newsreader system ("old man") in favor of
+an art-cyber direction for creative portraiture: ink-dark ground, acid accent,
+Bricolage Grotesque voice, Geist Mono apparatus. Token NAMES were kept so every
+component continued to work — `--paper` is now the dark ground and `--serif` is now
+the display grotesque. The full candidate study lives in the "Ryuxik Type Study"
+artifact. Mirror any token change into public/gallery/gallery.css and
+public/admin/admin.css (Worker-rendered pages restate them).
 
 ```css
 :root {
-  --paper:     #F1EEE5;  /* page ground — warm bone */
-  --ink:       #33291E;  /* warm near-black text */
-  --ink-soft:  #6E5D4A;  /* secondary text */
-  --ink-faint: #94846F;  /* captions, datelines */
-  --line:      #DAD3C4;  /* hairlines, borders */
-  --card:      #EAE6DA;  /* raised surfaces */
-  --accent:    #7A4A2B;  /* links, active nav, CTAs — deep sepia */
+  --paper:     #101014;  /* page ground — ink dark; HDR burns brightest here */
+  --ink:       #EFEFED;  /* near-white text */
+  --ink-soft:  #B6B6BC;  /* secondary text */
+  --ink-faint: #83838B;  /* captions, datelines — 5.2:1 on --paper */
+  --line:      #232330;  /* hairlines, borders */
+  --card:      #17171C;  /* raised surfaces */
+  --accent:    #D8FF3D;  /* links, active nav, CTAs — acid */
 }
 ```
 
 Type:
-- Serif (display + body): `"Newsreader Variable", Georgia, serif` — editorial monograph voice.
-  H1 clamp(1.9rem→2.5rem) weight 400; body 1.04rem/1.72.
-- Grotesque (nav, captions, labels, buttons, tables): `"Archivo Variable", Helvetica, Arial, sans-serif`,
-  small sizes, uppercase with letter-spacing 0.14–0.18em for labels/nav.
-- Wordmark: RYUXIK, grotesque, letter-spacing 0.34em, uppercase.
-- Running text max-width 66ch. Headings `text-wrap: balance`.
+- Voice (display + body): `"Bricolage Grotesque Variable"` (opsz auto-switches
+  display/text; display rules add weight ~740–800, `"wdth" 87`, letter-spacing
+  ≈ −0.02em). Body 1.02rem/1.62 weight 420. No italics anywhere.
+- Apparatus (nav, captions, labels, buttons, tables, EXIF): `"Geist Mono Variable"`,
+  small sizes, uppercase where labeled, letter-spacing 0.07em (mono is already wide).
+- Wordmark: site name in the voice face, weight 800, wdth 87, tight (−0.015em) — no
+  tracking-spread caps.
+- Buttons: acid ground, #101014 text. Running text max-width 66ch. Headings
+  `text-wrap: balance`.
 
 Layout: centered column max-width 720px for text pages; the Overview stream is a single column of
 images max-width 1100px, edge-to-edge on mobile. Generous whitespace; hairline rules only where

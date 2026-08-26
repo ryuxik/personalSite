@@ -42,8 +42,8 @@ const RECIPE = 5;
 const WIDTH = 1200;
 const HEIGHT = 630;
 
-const PAPER = '#F1EEE5';
-const INK = '#33291E';
+const PAPER = '#101014';   // F5 redesign: ink-dark ground
+const INK = '#EFEFED';
 const SHADE = '#0F0B07';
 
 const IMAGE_EXT = /\.(jpe?g|png|webp|tiff?)$/i;
@@ -218,7 +218,7 @@ function wordmarkSvg(text, { centerX, centerY, targetWidth, color }) {
   if (!hasAllGlyphs(text)) {
     // Degrade rather than drop letters. Font resolution is environment-dependent here.
     const size = Math.round(targetWidth / (text.length * 0.78 || 1));
-    return `<text x="${centerX}" y="${centerY + size * 0.36}" fill="${color}" text-anchor="middle" font-family="Archivo, Helvetica, Arial, DejaVu Sans, sans-serif" font-size="${size}" font-weight="500" letter-spacing="${(size * 0.34).toFixed(2)}">${escapeXml(text)}</text>`;
+    return `<text x="${centerX}" y="${centerY + size * 0.36}" fill="${color}" text-anchor="middle" font-family="Archivo, Helvetica, Arial, DejaVu Sans, sans-serif" font-size="${size}" font-weight="700" letter-spacing="${(size * 0.05).toFixed(2)}">${escapeXml(text)}</text>`;
   }
 
   const scale = targetWidth / naturalWidth(text);
