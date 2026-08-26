@@ -374,3 +374,58 @@ SEO/meta (in BaseLayout via a `<Seo>` component):
   B/C/D may APPEND new CSS classes under a clearly-commented section for their page but must not
   edit existing rules. If something in a shared file blocks you, note it in your report instead of
   editing.
+
+## Client galleries — "Selects" (Worker-rendered, private)
+
+Full product plan + principal-engineer review: the Selects artifact (2026-08-26).
+Private, per-client delivery galleries: HDR-true proofing, a mark-your-N-favorites-
+for-polish loop, byte-exact HEIC downloads, auto-expiry. Never linked from the site,
+never in sitemaps; every /g response carries `X-Robots-Tag: noindex` and
+`Referrer-Policy: no-referrer`.
+
+**Surfaces.** wrangler.jsonc gives the Worker `run_worker_first` on `/g/*`, `/api/*`,
+`/admin*`; everything else stays static assets. Code: `worker/` (entry `index.ts`,
+routes, `schema.sql` mirrored into `lib/db.ts`, STORE-zip writer, Resend client,
+daily cron). Client assets: `public/gallery/`, `public/admin/` (site tokens restated —
+the Worker renders outside the Astro build). Bindings: R2 `selects-media`,
+D1 `selects-db`, daily cron. See docs/LAUNCH.md § Selects for provisioning.
+
+**The link is the credential.** `/g/<slug>-<key>`, key = 16 base32 chars (80 bits).
+Media rides key-versioned paths (`…/m/<kv>/…`), cached ≤1h, so rotating the key kills
+leaked URLs within the hour — the stated rotation SLA. Wrong key, expired, deleted and
+never-existed all resolve to one identical tombstone. Clients have no accounts: a name
+chip (localStorage) attributes marks and comments.
+
+**Ingest is local and the server never decodes an image.** Verified 2026-08-26:
+nothing server-side turns HEIC HDR into a gain-map JPEG (sharp/libvips prebuilts have
+no HEIC; libheif can't read Apple gain maps; Apple's ImageIO writes no ISO JPEG — and
+toGainMapHDR -j emits the Apple scheme, which Chrome/sharp read as SDR). So Grain
+Studio's "Web preview" row authors a 2560 ISO 21496-1 gain-map JPEG via libultrahdr
+(`ultrahdr_app`, both intents BT.709 — libvips refuses to resize alternate-gamut maps
+without their ICC), and `scripts/gallery-ingest.mjs` derives the 900/1400/2048
+keepGainMap ladder + AVIF + thumbhash + CRC32 on the Mac and PUTs verbatim bytes to
+the admin API. Gates: refuse a gain-map-less preview (unless --sdr), refuse GPS EXIF
+(unless --allow-gps) — never strip, bytes are canonical. The preview JPEG is the ONE
+JPEG in the system and is never downloadable; every deliverable is HEIC
+(original / instagram 1080×1440 / rednote 1242×1656 — Grain Studio's checklist 1:1).
+
+**Marks ("mark your N for polish", N default 3).** One shared set per gallery, hard
+cap with a swap nudge, explicit finalize (locks + emails Santiago), photographer
+reopen. Re-ingesting a stem with --replace bumps its version: marks and threads
+survive, the client sees an "updated" chip — the polish loop IS delivery.
+
+**Zips stream, nothing is "prepared".** STORE-mode (HEIC doesn't compress), CRC32s
+from ingest, exact Content-Length, guard at 3.8 GB. Singles and zips serve R2 bytes
+verbatim — the system never re-encodes a delivery file.
+
+**Lifecycle.** draft → live → (marks submitted → polishing via versions) → expiry.
+Daily cron: T−14/T−3 photographer emails (Resend; clients get the in-gallery banner —
+v1 collects no client address), expiry moves bytes to `trash/` with a 7-day grace
+before purge, a reconciliation pass emails about R2 prefixes the DB doesn't know, and
+comment digests. Never R2 lifecycle rules (they'd fight the Extend button). Deletion
+keeps the paper trail: titles, threads, mark lists and events survive as rows.
+
+**Admin** (`/admin`, Cloudflare Access in production + SELECTS_ADMIN_TOKEN bearer):
+coverage matrix (photo × original/instagram/rednote/preview/ladder), share panel with
+rotate, marks view with Copy filenames + reopen, feedback threads with reply/resolve,
+extend / archive-zip / typed-confirm delete.

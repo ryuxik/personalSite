@@ -18,7 +18,11 @@
     "preview": "astro preview",
     "astro": "astro",
     "placeholders": "node scripts/make-placeholders.mjs",
-    "check-hdr": "node scripts/check-hdr.mjs"
+    "check-hdr": "node scripts/check-hdr.mjs",
+    "gallery:dev": "wrangler dev --port 8787",
+    "gallery:check": "tsc -p worker --noEmit",
+    "gallery:ingest": "node scripts/gallery-ingest.mjs",
+    "gallery:deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
@@ -32,6 +36,6 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "typescript": "^6.0.3",
-    "wrangler": "^4.123.0"
+    "wrangler": "^4.126.0"
   }
 }

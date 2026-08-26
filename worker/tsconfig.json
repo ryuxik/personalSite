@@ -1,0 +1,16 @@
+// Typecheck for the Worker only: `npm run gallery:check`.
+// Deliberately NOT part of the root tsconfig — the Worker's runtime types
+// (WebWorker lib + types.d.ts) would fight astro check's DOM lib.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "WebWorker"],
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["./**/*.ts", "./types.d.ts"]
+}

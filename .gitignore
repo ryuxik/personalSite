@@ -40,3 +40,9 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# wrangler local secrets
+.dev.vars
+
+# wrangler local dev state
+.wrangler/

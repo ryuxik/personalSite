@@ -382,3 +382,39 @@ Snapshot at the time of writing, grouped by what it costs you to leave it:
 - [ ] `src/components/PersonJsonLd.astro` — pass an explicit `name` if the credited name differs
       from the brand.
 - [ ] `src/lib/photos.ts` — real per-frame alt text once the placeholders are gone.
+
+## Selects — client galleries: provisioning & deploy
+
+One-time, in this order (needs the Cloudflare account + Resend):
+
+1. `npx wrangler r2 bucket create selects-media`
+2. `npx wrangler d1 create selects-db` → paste the `database_id` into wrangler.jsonc.
+3. `npx wrangler secret put SELECTS_ADMIN_TOKEN` — generate something long
+   (`openssl rand -hex 24`); the same value goes in your shell env as
+   `SELECTS_ADMIN_TOKEN` for the ingest CLI.
+4. Email (optional, photographer-only): verify `mail.ryuxik.io` in Resend (the apex
+   stays MX/TXT-free — § 5), then `npx wrangler secret put RESEND_API_KEY`. Without
+   it every send is a logged no-op. Test cold-start deliverability to Gmail + iCloud
+   before relying on the T−14 warnings.
+5. Cloudflare Access (Zero Trust → Applications): self-hosted app for
+   `ryuxik.io/admin*` and `ryuxik.io/api/admin*`, allow only your identity. The
+   Worker's bearer/cookie check still applies underneath (the CLI authenticates with
+   the token; Access service tokens can come later).
+6. `npm run gallery:deploy` (= build + `wrangler deploy`). The D1 schema applies
+   itself on first touch. The daily cron (06:17 UTC) is in wrangler.jsonc.
+7. Cache rule sanity: gallery media sets its own `Cache-Control: max-age=3600` —
+   rotation's 1-hour SLA depends on nothing overriding it (no "cache everything"
+   page rules on /g/*). Polish/Mirage stay off zone-wide (§ 1) — they would re-encode
+   gallery media exactly like portfolio media.
+
+Per shoot, after Grain Studio (Master + Instagram + RedNote + **Web preview** rows):
+
+    SELECTS_ADMIN_TOKEN=… node scripts/gallery-ingest.mjs ~/shoots/atelier-out \
+      --gallery atelier-mora --title "Atelier Mora — spring lookbook" \
+      --client "Nadia R." --n 3 --api https://ryuxik.io --live
+
+Copy the printed share link, send it to the client, done. Local dev of the whole
+surface: `npm run gallery:dev` (+ `.dev.vars` with SELECTS_ADMIN_TOKEN), ingest with
+`--api http://127.0.0.1:8787`. Polish round: re-export the marked stems, re-run
+ingest with `--replace`. Verify HDR end to end after ANY pipeline change:
+`node scripts/check-hdr.mjs` on a downloaded ladder rung must say PRESENT.

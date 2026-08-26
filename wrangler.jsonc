@@ -1,11 +1,47 @@
-// Cloudflare Workers static-assets deploy for the Astro site.
+// Cloudflare Workers deploy for the Astro site + the Selects client galleries.
 // `npx wrangler deploy` (the Workers Builds deploy command) reads this.
+//
+// The static site is untouched: every path EXCEPT the three run_worker_first
+// globs below is served straight from ./dist as before. The Worker only owns
+// the private-gallery surface (SPEC.md § Client galleries):
+//   /g/*      client galleries (capability URLs — the link is the credential)
+//   /api/*    admin + gallery APIs
+//   /admin*   the photographer's admin (put Cloudflare Access in front of it)
+//
+// Provisioning (once, see docs/LAUNCH.md § Selects):
+//   npx wrangler r2 bucket create selects-media
+//   npx wrangler d1 create selects-db        → paste database_id below
+//   npx wrangler secret put SELECTS_ADMIN_TOKEN
+//   npx wrangler secret put RESEND_API_KEY   (optional — email is a no-op without it)
 {
   "name": "personalsite",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-08-01",
   "assets": {
     "directory": "./dist",
     "html_handling": "auto-trailing-slash",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "binding": "ASSETS",
+    "run_worker_first": ["/g/*", "/api/*", "/admin", "/admin/*"]
+  },
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "selects-media" }
+  ],
+  "d1_databases": [
+    // database_id is filled in after `npx wrangler d1 create selects-db`;
+    // wrangler dev --local works with the placeholder untouched.
+    { "binding": "DB", "database_name": "selects-db", "database_id": "00000000-0000-0000-0000-000000000000" }
+  ],
+  "triggers": {
+    // Daily lifecycle pass: expiry warnings, trash-grace deletes, purge,
+    // storage-vs-DB reconciliation, comment digest. worker/cron.ts.
+    "crons": ["17 6 * * *"]
+  },
+  "vars": {
+    // Where lifecycle + digest email goes. Sender domain is configured in
+    // Resend (mail.ryuxik.io — the zone apex deliberately has no MX/TXT).
+    "PHOTOGRAPHER_EMAIL": "ryuxik@gmail.com",
+    "EMAIL_FROM": "Selects <selects@mail.ryuxik.io>",
+    "PUBLIC_ORIGIN": "https://ryuxik.io"
   }
 }

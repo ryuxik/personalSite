@@ -1,0 +1,173 @@
+/* Selects — client gallery styles. A private annex of ryuxik.io: the token
+ * block below mirrors src/styles/global.css (the gallery is Worker-rendered,
+ * outside the Astro build, so the tokens are restated here — change them in
+ * BOTH places or not at all). Single warm-paper theme by design (SPEC.md);
+ * the one near-black surface is the lightbox, where HDR frames belong. */
+
+:root {
+  --paper: #F1EEE5;
+  --ink: #33291E;
+  --ink-soft: #6E5D4A;
+  --ink-faint: #75654F;
+  --line: #DAD3C4;
+  --card: #EAE6DA;
+  --accent: #7A4A2B;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --grotesque: "Archivo", Helvetica, Arial, sans-serif;
+  --col-wide: 1100px;
+  --gutter: clamp(1.1rem, 4vw, 2rem);
+  --tracking-label: 0.16em;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+img { max-width: 100%; display: block; }
+button { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; }
+
+/* ---------------------------------------------------------------- header */
+.ghead { max-width: var(--col-wide); margin: 0 auto; padding: clamp(2.5rem, 8vw, 5rem) var(--gutter) 2rem; }
+.ghead__mark {
+  font-family: var(--grotesque); font-size: 0.6875rem; font-weight: 600;
+  letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--ink-faint); margin: 0 0 1.25rem;
+}
+.ghead__title {
+  font-family: var(--serif); font-style: italic; font-weight: 500;
+  font-size: clamp(1.9rem, 5.5vw, 2.9rem); line-height: 1.08; margin: 0 0 0.6rem; text-wrap: balance;
+}
+.ghead__contract { font-family: var(--grotesque); font-size: 0.8438rem; letter-spacing: 0.04em; color: var(--ink-soft); margin: 0; }
+
+.banner {
+  max-width: var(--col-wide); margin: 0 auto 1rem; padding: 0.6rem var(--gutter);
+  font-family: var(--grotesque); font-size: 0.8125rem; color: var(--ink-soft);
+}
+.banner.urgent { color: var(--accent); font-weight: 600; }
+
+/* ---------------------------------------------------------------- stream */
+.stream { max-width: var(--col-wide); margin: 0 auto; padding: 0 var(--gutter) 6rem; }
+@media (max-width: 640px) { .stream { padding-left: 0; padding-right: 0; } }
+
+.frame { position: relative; margin: 0 0 0.6rem; background-position: center; background-repeat: no-repeat; background-size: cover; overflow: hidden; }
+.frame + .frame { margin-top: 2.25rem; }
+.frame__picture { display: block; }
+.frame__picture img { width: 100%; height: auto; }
+
+.frame__updated {
+  position: absolute; top: 0.75rem; left: 0.75rem;
+  font-family: var(--grotesque); font-size: 0.6875rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: var(--paper); color: var(--accent); padding: 0.25rem 0.6rem; border-radius: 99px;
+}
+
+/* actions live in the margin under the frame — never on the photograph */
+.frame__actions {
+  display: flex; gap: 1.4rem; align-items: center;
+  padding: 0.55rem var(--gutter) 0;
+  max-width: var(--col-wide);
+}
+@media (min-width: 641px) { .frame__actions { padding-left: 0; padding-right: 0; } }
+.act { font-family: var(--grotesque); font-size: 0.9375rem; color: var(--ink-faint); display: inline-flex; align-items: center; gap: 0.35rem; min-height: 44px; }
+.act:hover { color: var(--ink); }
+.act .ring {
+  width: 19px; height: 19px; border: 1.5px solid var(--ink-faint); border-radius: 50%;
+  display: inline-block; transition: background-color 120ms, border-color 120ms;
+}
+.frame.marked .act--mark .ring { background: var(--accent); border-color: var(--accent); }
+.frame.marked .act--mark { color: var(--accent); }
+.act__count:not(:empty) { font-size: 0.75rem; color: var(--ink-faint); }
+
+.gfoot { max-width: var(--col-wide); margin: 0 auto; padding: 0 var(--gutter) 7rem; font-family: var(--grotesque); font-size: 0.8125rem; color: var(--ink-faint); }
+.gfoot a { color: inherit; }
+
+/* ------------------------------------------------------------------ tray */
+.tray {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--card); border: 1px solid var(--line); border-radius: 99px;
+  padding: 0.55rem 1.1rem; font-family: var(--grotesque); font-size: 0.875rem;
+  box-shadow: 0 6px 24px rgba(51, 41, 30, 0.14);
+  max-width: min(92vw, 30rem); width: max-content;
+}
+.tray__count { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tray__spacer { flex: 1; min-width: 0.5rem; }
+.tray__dl { color: var(--ink-soft); font-weight: 500; }
+.tray__finalize { color: var(--accent); font-weight: 600; letter-spacing: 0.03em; white-space: nowrap; }
+.tray__finalize:disabled { color: var(--ink-faint); cursor: default; }
+
+/* ----------------------------------------------------------------- sheet */
+.sheet { position: fixed; inset: 0; background: rgba(30, 24, 17, 0.45); display: flex; align-items: flex-end; justify-content: center; z-index: 30; }
+@media (min-width: 641px) { .sheet { align-items: center; } }
+.sheet__panel {
+  background: var(--paper); width: 100%; max-width: 34rem; max-height: 82vh; overflow-y: auto;
+  border-radius: 14px 14px 0 0; padding: 1.4rem var(--gutter) calc(env(safe-area-inset-bottom, 0px) + 1.4rem);
+}
+@media (min-width: 641px) { .sheet__panel { border-radius: 6px; padding: 1.75rem; } }
+.sheet h2 { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 1.35rem; margin: 0 0 0.75rem; }
+.sheet p { color: var(--ink-soft); font-size: 0.975rem; margin: 0 0 1rem; }
+.sheet label { display: block; font-family: var(--grotesque); font-size: 0.8125rem; color: var(--ink-faint); margin-bottom: 1rem; }
+.sheet input[type="text"], .sheet textarea {
+  width: 100%; margin-top: 0.35rem; padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line); border-radius: 4px; background: #fff;
+  font: inherit; color: var(--ink);
+}
+.sheet textarea { min-height: 5.5rem; resize: vertical; }
+.sheet__row { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 0.5rem; flex-wrap: wrap; }
+.btn {
+  font-family: var(--grotesque); font-size: 0.8438rem; font-weight: 600; letter-spacing: 0.05em;
+  padding: 0.6rem 1.1rem; border-radius: 4px; min-height: 44px;
+}
+.btn--primary { background: var(--accent); color: var(--paper); }
+.btn--quiet { color: var(--ink-soft); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+.thread { list-style: none; margin: 0 0 1rem; padding: 0; }
+.thread li { border-top: 1px solid var(--line); padding: 0.7rem 0; }
+.thread li:first-child { border-top: none; }
+.thread .who { font-family: var(--grotesque); font-size: 0.75rem; font-weight: 600; color: var(--ink-faint); margin: 0 0 0.2rem; }
+.thread .who.owner { color: var(--accent); }
+.thread .what { margin: 0; font-size: 0.975rem; }
+.comment-error { font-family: var(--grotesque); font-size: 0.8125rem; color: var(--accent); }
+
+.dl-list { list-style: none; margin: 0; padding: 0; }
+.dl-list li { border-top: 1px solid var(--line); }
+.dl-list li:first-child { border-top: none; }
+.dl-list a { display: flex; justify-content: space-between; gap: 1rem; padding: 0.8rem 0.2rem; color: var(--ink); text-decoration: none; font-family: var(--grotesque); font-size: 0.9375rem; min-height: 44px; align-items: center; }
+.dl-list a:hover { color: var(--accent); }
+.dl-list .size { color: var(--ink-faint); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+
+.review-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.5rem; margin: 0 0 1.2rem; }
+.review-grid img { aspect-ratio: 1; object-fit: cover; border-radius: 3px; }
+
+/* -------------------------------------------------------------- lightbox */
+.lightbox {
+  position: fixed; inset: 0; z-index: 40; background: #0d0a07;
+  display: flex; align-items: center; justify-content: center;
+}
+.lightbox img { max-width: 100vw; max-height: 100vh; width: auto; height: auto; }
+.lightbox__nav {
+  position: absolute; inset-block: 0; width: 22%; display: flex; align-items: center; color: transparent;
+}
+.lightbox__nav--prev { left: 0; justify-content: flex-start; }
+.lightbox__nav--next { right: 0; justify-content: flex-end; }
+.lightbox__close { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 0.6rem); right: 1rem; color: #b7ab99; font-family: var(--grotesque); font-size: 1.6rem; line-height: 1; padding: 0.4rem; }
+/* Motion rule: none on HDR displays (Safari 26 drops HDR under animated
+ * ancestors — cuts, not fades); subtle elsewhere. */
+@media (dynamic-range: high) { .lightbox, .lightbox img { transition: none !important; animation: none !important; } }
+
+/* ------------------------------------------------------------- tombstone */
+.tombstone { max-width: 36rem; margin: 0 auto; padding: 22vh var(--gutter) 4rem; }
+.tombstone__mark { font-family: var(--grotesque); font-size: 0.6875rem; font-weight: 600; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--ink-faint); margin: 0 0 1.5rem; }
+.tombstone h1 { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 1.9rem; margin: 0 0 1rem; text-wrap: balance; }
+.tombstone p { color: var(--ink-soft); }
+.tombstone a { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
