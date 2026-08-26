@@ -26,15 +26,9 @@ export async function emailPhotographer(env: Env, subject: string, html: string)
   if (env.NOTIFY) {
     try {
       const { EmailMessage } = await import('cloudflare:email');
-      const { createMimeMessage } = await import('mimetext');
       const zone = new URL(env.PUBLIC_ORIGIN ?? 'https://ryuxik.io').hostname;
       const from = `selects@${zone}`;
-      const msg = createMimeMessage();
-      msg.setSender({ name: 'Selects', addr: from });
-      msg.setRecipient(to);
-      msg.setSubject(subject);
-      msg.addMessage({ contentType: 'text/html', data: html });
-      await env.NOTIFY.send(new EmailMessage(from, to, msg.asRaw()));
+      await env.NOTIFY.send(new EmailMessage(from, to, buildMime(from, to, zone, subject, html)));
       return true;
     } catch (error) {
       console.log(`[email native failed] ${subject}: ${String(error)}`);
@@ -66,4 +60,29 @@ export async function emailPhotographer(env: Env, subject: string, html: string)
     console.log(`[email noop — no transport configured] ${subject}`);
   }
   return false;
+}
+
+/* Minimal RFC 5322 message: HTML body base64-encoded, subject RFC 2047-encoded
+ * (our subjects carry em dashes). Hand-rolled because the obvious npm MIME
+ * builders drag Node builtins into the Worker bundle for no gain. */
+function buildMime(from: string, to: string, zone: string, subject: string, html: string): string {
+  const utf8ToB64 = (text: string) => {
+    const bytes = new TextEncoder().encode(text);
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary);
+  };
+  const body = utf8ToB64(html).replace(/(.{76})/g, '$1\r\n');
+  return [
+    `From: Selects <${from}>`,
+    `To: ${to}`,
+    `Subject: =?utf-8?B?${utf8ToB64(subject)}?=`,
+    `Date: ${new Date().toUTCString()}`,
+    `Message-ID: <${crypto.randomUUID()}@${zone}>`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=utf-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    body,
+  ].join('\r\n');
 }
