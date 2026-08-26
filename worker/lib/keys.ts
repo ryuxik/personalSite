@@ -12,10 +12,18 @@ const ALPHABET = 'abcdefghjkmnpqrstvwxyz23456789'; // no i/l/o/u/0/1 — read-al
 export const KEY_LENGTH = 16;
 
 export function newAccessKey(): string {
-  const raw = new Uint8Array(KEY_LENGTH);
-  crypto.getRandomValues(raw);
+  // Rejection sampling: 256 % 30 !== 0, so a plain modulo would bias the low
+  // 16 alphabet characters by ~12.5% and shave the keyspace below the stated
+  // 80 bits. Reject bytes >= 240 (the largest multiple of 30) instead.
+  const LIMIT = 256 - (256 % ALPHABET.length); // 240
   let out = '';
-  for (const byte of raw) out += ALPHABET[byte % ALPHABET.length];
+  const raw = new Uint8Array(KEY_LENGTH * 2);
+  while (out.length < KEY_LENGTH) {
+    crypto.getRandomValues(raw);
+    for (const byte of raw) {
+      if (byte < LIMIT && out.length < KEY_LENGTH) out += ALPHABET[byte % ALPHABET.length];
+    }
+  }
   return out;
 }
 

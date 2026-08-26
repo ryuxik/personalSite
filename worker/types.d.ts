@@ -57,6 +57,15 @@ interface D1Database {
   exec(sql: string): Promise<{ count: number; duration: number }>;
 }
 
+/** Workers-runtime global: the ONLY way a hand-rolled stream response gets an
+ * honored Content-Length (a manual header on an unknown-length stream is
+ * ignored or enforced-by-reset depending on runtime). */
+declare class FixedLengthStream {
+  constructor(length: number);
+  readonly readable: ReadableStream<Uint8Array>;
+  readonly writable: WritableStream<Uint8Array>;
+}
+
 interface Fetcher {
   fetch(request: Request | string): Promise<Response>;
 }

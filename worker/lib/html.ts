@@ -23,6 +23,7 @@ export const GALLERY_HEADERS: Record<string, string> = {
   'X-Robots-Tag': 'noindex, nofollow',
   'Referrer-Policy': 'no-referrer',
   'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff',
 };
 
 export function page(title: string, head: string, body: string): string {
@@ -33,7 +34,6 @@ export function page(title: string, head: string, body: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>${esc(title)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 ${head}
 </head>
 <body>
@@ -45,7 +45,16 @@ ${body}
 export function json(data: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers },
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      // SPEC: EVERY /g response is invisible by construction — the API JSON
+      // (client names, comment bodies) included, not just pages.
+      'X-Robots-Tag': 'noindex, nofollow',
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+      ...headers,
+    },
   });
 }
 

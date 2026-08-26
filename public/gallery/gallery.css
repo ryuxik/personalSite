@@ -4,11 +4,29 @@
  * BOTH places or not at all). Single warm-paper theme by design (SPEC.md);
  * the one near-black surface is the lightbox, where HDR frames belong. */
 
+/* Self-hosted variable fonts (SPEC hard rule: no runtime font/CDN deps) —
+ * the same @fontsource-variable files the Astro site bundles, latin subset. */
+@font-face {
+  font-family: "Newsreader";
+  src: url("/gallery/fonts/newsreader-latin-wght-normal.woff2") format("woff2-variations");
+  font-style: normal; font-weight: 200 800; font-display: swap;
+}
+@font-face {
+  font-family: "Newsreader";
+  src: url("/gallery/fonts/newsreader-latin-wght-italic.woff2") format("woff2-variations");
+  font-style: italic; font-weight: 200 800; font-display: swap;
+}
+@font-face {
+  font-family: "Archivo";
+  src: url("/gallery/fonts/archivo-latin-wght-normal.woff2") format("woff2-variations");
+  font-style: normal; font-weight: 100 900; font-display: swap;
+}
+
 :root {
   --paper: #F1EEE5;
   --ink: #33291E;
   --ink-soft: #6E5D4A;
-  --ink-faint: #75654F;
+  --ink-faint: #94846F;
   --line: #DAD3C4;
   --card: #EAE6DA;
   --accent: #7A4A2B;

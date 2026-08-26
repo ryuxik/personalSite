@@ -3,7 +3,7 @@
  *
  * URL shape: /g/<slug>-<key>          the page (capability URL — link = credential)
  *            …/m/<kv>/<pid>/<kind>    media (key-versioned; rotation kills old paths)
- *            …/dl/<pid>/<kind>        single download (attachment)
+ *            …/dl/<pid>/<kind>        single download (deliverables ONLY)
  *            …/zip/<scope>/<kind>     streamed zip (scope: all | marked)
  *            …/api/mark|finalize|comment|comments
  *
@@ -11,6 +11,18 @@
  * chrome recedes; the preview ladder is the portfolio's exact <picture>
  * pattern (media-first HDR JPEG, then AVIF); every deliverable byte is served
  * verbatim from R2 — this file never transcodes anything.
+ *
+ * Status gating (review finding): `draft` hides EVERYTHING except the soft
+ * "not yet ready" shell — media, downloads, zips and the API all tombstone,
+ * so "Back to draft" genuinely conceals a gallery from an already-shared
+ * link. The admin matrix uses its own authed media route instead.
+ *
+ * Caching (review finding): Workers responses are NOT edge-cached unless the
+ * Cache API is used — which we deliberately don't: media is
+ * `Cache-Control: private` (a client's unreleased photographs have no
+ * business in a shared cache), so server-side revocation — rotation, draft,
+ * expiry, deletion — is INSTANT for every new request, and the only residue
+ * is the legitimate viewer's own browser cache (≤1h).
  */
 
 import {
@@ -28,9 +40,11 @@ import { esc, page, json, notFoundTombstone, GALLERY_HEADERS } from '../lib/html
 import { streamZip, zipTooLarge, zipTotalSize, type ZipEntry } from '../lib/zip';
 import { emailPhotographer } from '../lib/email';
 
-const LADDER = [900, 1400, 2048] as const;
 const DELIVERABLES = ['original', 'instagram', 'rednote'] as const;
-const MEDIA_CACHE = 'public, max-age=3600'; // = the key-rotation SLA
+const MEDIA_CACHE = 'private, max-age=3600'; // browser-only; never shared caches
+const MAX_API_BODY = 16 * 1024; // a mark/comment payload has no business being bigger
+const MAX_COMMENTS_PER_PHOTO = 200; // abuse bound — a real thread is dozens
+const MAX_COMMENTS_PER_GALLERY = 2000;
 
 interface GalleryContext {
   gallery: GalleryRow;
@@ -60,13 +74,19 @@ export async function handleGallery(request: Request, env: Env, path: string[]):
   const { gallery } = ctx;
   const rest = path.slice(2);
 
-  if (rest.length === 0) {
-    if (gallery.status === 'draft') return draftPage(gallery);
-    return galleryPage(env, ctx);
+  // Draft conceals everything but the shell (review finding).
+  if (gallery.status === 'draft') {
+    return rest.length === 0 ? draftPage(gallery) : notFoundTombstone();
   }
+
+  if (rest.length === 0) return galleryPage(env, ctx);
   if (rest[0] === 'm' && rest.length === 4) return serveMedia(env, ctx, rest[1], rest[2], rest[3], false);
-  if (rest[0] === 'dl' && rest.length === 3)
+  if (rest[0] === 'dl' && rest.length === 3) {
+    // Deliverables only: the preview JPEG and the ladder are never offered
+    // for download (SPEC hard rule — review finding).
+    if (!(DELIVERABLES as readonly string[]).includes(rest[2])) return notFoundTombstone();
     return serveMedia(env, ctx, String(gallery.key_version), rest[1], rest[2], true);
+  }
   if (rest[0] === 'zip' && rest.length === 3) return serveZip(env, ctx, rest[1], rest[2]);
   if (rest[0] === 'api') return handleApi(request, env, ctx, rest.slice(1));
   return notFoundTombstone();
@@ -83,23 +103,33 @@ async function serveMedia(
   download: boolean
 ): Promise<Response> {
   const { gallery } = ctx;
-  if (Number(kv) !== gallery.key_version) return notFoundTombstone();
-  const photo = await env.DB.prepare('SELECT * FROM photos WHERE id = ? AND gallery_id = ?')
-    .bind(Number(pid), gallery.id)
-    .first<PhotoRow>();
-  if (!photo) return notFoundTombstone();
-  const asset = await env.DB.prepare('SELECT * FROM assets WHERE photo_id = ? AND kind = ? AND version = ?')
-    .bind(photo.id, kind, photo.version)
+  const kvNum = Number(kv);
+  const pidNum = Number(pid);
+  // Integer guards: a NaN would reach D1 as a type error → 500, breaking the
+  // uniform-tombstone contract (review finding).
+  if (!Number.isInteger(kvNum) || !Number.isInteger(pidNum)) return notFoundTombstone();
+  if (kvNum !== gallery.key_version) return notFoundTombstone();
+  // One JOIN instead of two round trips; removed photos never serve.
+  const asset = await env.DB.prepare(
+    `SELECT a.* FROM assets a
+       JOIN photos p ON p.id = a.photo_id
+      WHERE p.id = ? AND p.gallery_id = ? AND p.removed = 0
+        AND a.kind = ? AND a.version = p.version`
+  )
+    .bind(pidNum, gallery.id, kind)
     .first<AssetRow>();
-  if (!asset) return notFoundTombstone();
+  if (!asset || !asset.r2_key) return notFoundTombstone();
   const object = await env.MEDIA.get(asset.r2_key);
   if (!object) return notFoundTombstone();
+  if (object.size !== asset.bytes)
+    console.log(`size drift: ${asset.r2_key} stored ${object.size} vs recorded ${asset.bytes}`);
   const headers: Record<string, string> = {
     'Content-Type': asset.content_type,
-    'Content-Length': String(asset.bytes),
+    'Content-Length': String(object.size), // R2 truth, not the DB row
     'Cache-Control': MEDIA_CACHE,
     'X-Robots-Tag': 'noindex',
     'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
   };
   if (download) headers['Content-Disposition'] = `attachment; filename="${asset.filename}"`;
   // Bytes pass through VERBATIM — no transformation between R2 and the wire.
@@ -119,7 +149,7 @@ async function serveZip(env: Env, ctx: GalleryContext, scope: string, kind: stri
   const entries: ZipEntry[] = [];
   for (const photo of photos) {
     const asset = assets.get(`${photo.id}/${kind}`);
-    if (!asset) continue; // matrix gap: that size simply is not in the zip
+    if (!asset || !asset.r2_key) continue; // matrix gap: that size simply is not in the zip
     entries.push({
       name: `${gallery.slug}/${asset.filename}`,
       bytes: asset.bytes,
@@ -127,6 +157,11 @@ async function serveZip(env: Env, ctx: GalleryContext, scope: string, kind: stri
       open: async () => {
         const object = await env.MEDIA.get(asset.r2_key);
         if (!object) throw new Error(`R2 object missing: ${asset.r2_key}`);
+        // The zip's headers and offsets are precomputed from DB sizes — a
+        // drifted object would silently corrupt every later entry. Refuse
+        // loudly instead (review finding).
+        if (object.size !== asset.bytes)
+          throw new Error(`size drift on ${asset.r2_key}: ${object.size} vs ${asset.bytes}`);
         return object.body;
       },
     });
@@ -135,13 +170,22 @@ async function serveZip(env: Env, ctx: GalleryContext, scope: string, kind: stri
   const guard = zipTooLarge(entries);
   if (guard) return json({ error: guard }, 400);
   await logEvent(env.DB, gallery.id, 'zip', `${scope}/${kind} × ${entries.length}`);
-  return new Response(streamZip(entries, new Date()), {
+  const total = zipTotalSize(entries);
+  // FixedLengthStream is the only way a hand-rolled stream body gets an
+  // honored Content-Length (exact download progress on a 700 MB zip).
+  const fixed = new FixedLengthStream(total);
+  streamZip(entries, new Date())
+    .pipeTo(fixed.writable)
+    .catch((error) => console.log('zip stream failed:', String(error)));
+  return new Response(fixed.readable, {
     headers: {
       'Content-Type': 'application/zip',
-      'Content-Length': String(zipTotalSize(entries)),
+      'Content-Length': String(total),
       'Content-Disposition': `attachment; filename="${gallery.slug}-${kind}-${scope}.zip"`,
       'Cache-Control': 'no-store',
       'X-Robots-Tag': 'noindex',
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }
@@ -165,6 +209,8 @@ async function handleApi(request: Request, env: Env, ctx: GalleryContext, rest: 
   }
 
   if (request.method !== 'POST') return json({ error: 'method' }, 405);
+  const declared = Number(request.headers.get('content-length') ?? 0);
+  if (declared > MAX_API_BODY) return json({ error: 'payload too large' }, 413);
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   if (!body) return json({ error: 'bad json' }, 400);
   const viewer = String(body.viewer ?? '').trim().slice(0, 40) || 'Guest';
@@ -175,37 +221,48 @@ async function handleApi(request: Request, env: Env, ctx: GalleryContext, rest: 
     const photo = await photoByStem(env, gallery.id, String(body.stem ?? ''));
     if (!photo) return json({ error: 'unknown photo' }, 404);
     const on = Boolean(body.on);
-    if (on && photo.marked !== 1) {
-      const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM photos WHERE gallery_id = ? AND marked = 1')
-        .bind(gallery.id)
-        .first<{ n: number }>();
-      if ((row?.n ?? 0) >= gallery.n_marks)
+    if (on) {
+      // Atomic cap: check-then-write raced under concurrent viewers (the mark
+      // set is shared), so the cap lives inside one conditional UPDATE.
+      const r = await env.DB.prepare(
+        `UPDATE photos SET marked = 1, marked_by = ?, marked_at = ?
+          WHERE id = ? AND removed = 0
+            AND (SELECT COUNT(*) FROM photos WHERE gallery_id = ? AND marked = 1 AND id != ?) < ?`
+      )
+        .bind(viewer, new Date().toISOString(), photo.id, gallery.id, photo.id, gallery.n_marks)
+        .run();
+      if (r.meta.changes === 0 && photo.marked !== 1)
         return json(
           { error: 'cap', message: `You've marked ${gallery.n_marks} of ${gallery.n_marks} — remove one to swap.` },
           409
         );
+    } else {
+      await env.DB.prepare("UPDATE photos SET marked = 0, marked_by = '', marked_at = NULL WHERE id = ?")
+        .bind(photo.id)
+        .run();
     }
-    await env.DB.prepare('UPDATE photos SET marked = ?, marked_by = ?, marked_at = ? WHERE id = ?')
-      .bind(on ? 1 : 0, on ? viewer : '', on ? new Date().toISOString() : null, photo.id)
-      .run();
     return json(await markState(env, gallery));
   }
 
   if (action === 'finalize') {
-    if (gallery.marks_state !== 'open') return json({ error: 'locked' }, 409);
     const note = String(body.note ?? '').slice(0, 2000);
-    await env.DB.prepare(
-      "UPDATE galleries SET marks_state = 'submitted', marks_note = ?, marks_submitted_at = ? WHERE id = ?"
+    // Atomic: refuses double-finalize races, and an empty mark set (review finding).
+    const r = await env.DB.prepare(
+      `UPDATE galleries SET marks_state = 'submitted', marks_note = ?, marks_submitted_at = ?
+        WHERE id = ? AND marks_state = 'open'
+          AND (SELECT COUNT(*) FROM photos WHERE gallery_id = ? AND marked = 1 AND removed = 0) > 0`
     )
-      .bind(note, new Date().toISOString(), gallery.id)
+      .bind(note, new Date().toISOString(), gallery.id, gallery.id)
       .run();
+    if (r.meta.changes === 0)
+      return json({ error: gallery.marks_state === 'open' ? 'empty' : 'locked' }, 409);
     await logEvent(env.DB, gallery.id, 'marks-submitted', `by ${viewer}`);
     const marked = await env.DB.prepare(
-      'SELECT stem FROM photos WHERE gallery_id = ? AND marked = 1 ORDER BY position, stem'
+      'SELECT stem FROM photos WHERE gallery_id = ? AND marked = 1 AND removed = 0 ORDER BY stem'
     )
       .bind(gallery.id)
       .all<{ stem: string }>();
-    const stems = marked.results.map((r) => r.stem).join(', ');
+    const stems = marked.results.map((x) => x.stem).join(', ');
     await emailPhotographer(
       env,
       `Selects — ${gallery.title}: marks are in`,
@@ -222,6 +279,16 @@ async function handleApi(request: Request, env: Env, ctx: GalleryContext, rest: 
     if (!photo) return json({ error: 'unknown photo' }, 404);
     const text = String(body.body ?? '').trim().slice(0, 4000);
     if (!text) return json({ error: 'empty' }, 400);
+    // Abuse bounds: a capability link is unauthenticated — cap thread growth
+    // so a spam run cannot flood D1 or the digest email (review finding).
+    const counts = await env.DB.prepare(
+      `SELECT (SELECT COUNT(*) FROM comments WHERE photo_id = ?) AS on_photo,
+              (SELECT COUNT(*) FROM comments c JOIN photos p ON p.id = c.photo_id WHERE p.gallery_id = ?) AS on_gallery`
+    )
+      .bind(photo.id, gallery.id)
+      .first<{ on_photo: number; on_gallery: number }>();
+    if ((counts?.on_photo ?? 0) >= MAX_COMMENTS_PER_PHOTO || (counts?.on_gallery ?? 0) >= MAX_COMMENTS_PER_GALLERY)
+      return json({ error: 'thread full', message: 'This thread is full — email Santiago directly.' }, 429);
     await env.DB.prepare('INSERT INTO comments (photo_id, author, by_owner, body) VALUES (?, ?, 0, ?)')
       .bind(photo.id, viewer, text)
       .run();
@@ -232,14 +299,14 @@ async function handleApi(request: Request, env: Env, ctx: GalleryContext, rest: 
 }
 
 async function photoByStem(env: Env, galleryId: number, stem: string): Promise<PhotoRow | null> {
-  return env.DB.prepare('SELECT * FROM photos WHERE gallery_id = ? AND stem = ?')
+  return env.DB.prepare('SELECT * FROM photos WHERE gallery_id = ? AND stem = ? AND removed = 0')
     .bind(galleryId, stem)
     .first<PhotoRow>();
 }
 
 async function markState(env: Env, gallery: GalleryRow): Promise<Record<string, unknown>> {
   const r = await env.DB.prepare(
-    'SELECT stem FROM photos WHERE gallery_id = ? AND marked = 1 ORDER BY position, stem'
+    'SELECT stem FROM photos WHERE gallery_id = ? AND marked = 1 AND removed = 0 ORDER BY stem'
   )
     .bind(gallery.id)
     .all<{ stem: string }>();
@@ -281,6 +348,15 @@ async function galleryPage(env: Env, ctx: GalleryContext): Promise<Response> {
   const media = (photo: PhotoRow, kind: string) => `${base}/m/${gallery.key_version}/${photo.id}/${kind}`;
   const SIZES = '(min-width: 1100px) 1036px, (min-width: 640px) calc(100vw - 4rem), 100vw';
 
+  /** Ladder rung widths per photo, discovered from what actually exists —
+   * widths are dynamic (a narrow master contributes its own width). */
+  const rungWidths = (photo: PhotoRow, prefix: 'l' | 'a') =>
+    [...assets.keys()]
+      .filter((k) => k.startsWith(`${photo.id}/${prefix}`))
+      .map((k) => Number(k.split('/')[1].slice(1)))
+      .filter((w) => Number.isInteger(w))
+      .sort((a, b) => a - b);
+
   const state = {
     title: gallery.title,
     client: gallery.client_name,
@@ -307,20 +383,24 @@ async function galleryPage(env: Env, ctx: GalleryContext): Promise<Response> {
 
   const figures = photos
     .map((p, i) => {
-      const rungs = LADDER.filter((w) => assets.has(`${p.id}/l${w}`));
-      if (rungs.length === 0) return '';
-      const jpgSrcset = rungs.map((w) => `${media(p, `l${w}`)} ${w}w`).join(', ');
-      const avifRungs = LADDER.filter((w) => assets.has(`${p.id}/a${w}`));
+      const jpgRungs = rungWidths(p, 'l');
+      if (jpgRungs.length === 0) return '';
+      const avifRungs = rungWidths(p, 'a');
+      const jpgSrcset = jpgRungs.map((w) => `${media(p, `l${w}`)} ${w}w`).join(', ');
       const avifSrcset = avifRungs.map((w) => `${media(p, `a${w}`)} ${w}w`).join(', ');
-      const fallbackW = rungs.includes(1400) ? 1400 : rungs[rungs.length - 1];
+      const fallbackW = jpgRungs.includes(1400) ? 1400 : jpgRungs[jpgRungs.length - 1];
       const scale = p.width && p.height ? p.height / p.width : 1;
-      const style = [
-        `aspect-ratio: ${p.width ?? 3} / ${p.height ?? 2}`,
-        `background-color: ${p.color}`,
-        p.thumbhash ? `background-image: url("${p.thumbhash}")` : null,
-      ]
-        .filter(Boolean)
-        .join('; ');
+      // color/thumbhash are validated at upload AND escaped here — the style
+      // attribute was the one unescaped interpolation on the page (review).
+      const style = esc(
+        [
+          `aspect-ratio: ${p.width ?? 3} / ${p.height ?? 2}`,
+          `background-color: ${p.color}`,
+          p.thumbhash ? `background-image: url("${p.thumbhash}")` : null,
+        ]
+          .filter(Boolean)
+          .join('; ')
+      );
       const updated = p.version > 1 ? `<span class="frame__updated">updated</span>` : '';
       return `<figure class="frame" data-stem="${esc(p.stem)}" style="${style}">
   <picture class="frame__picture">
@@ -378,11 +458,6 @@ ${figures}
 <script id="gallery-state" type="application/json">${JSON.stringify(state).replaceAll('<', '\\u003c')}</script>
 <script src="/gallery/gallery.js" defer></script>`;
 
-  const html = page(
-    gallery.title,
-    `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:ital,opsz,wght@1,6..72,400..600&display=swap">
-<link rel="stylesheet" href="/gallery/gallery.css">`,
-    body
-  );
+  const html = page(gallery.title, `<link rel="stylesheet" href="/gallery/gallery.css">`, body);
   return new Response(html, { headers: GALLERY_HEADERS });
 }

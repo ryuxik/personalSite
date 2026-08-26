@@ -6,11 +6,14 @@
  * so local dev and a fresh deploy degrade quietly instead of failing loudly.
  */
 
-export async function emailPhotographer(env: Env, subject: string, html: string): Promise<void> {
+/** Returns true only when Resend accepted the message — callers must NOT
+ * commit "already notified" state on false, or a no-op/failure silently
+ * swallows the notification forever (review finding). */
+export async function emailPhotographer(env: Env, subject: string, html: string): Promise<boolean> {
   const to = env.PHOTOGRAPHER_EMAIL;
   if (!env.RESEND_API_KEY || !to) {
     console.log(`[email noop] ${subject}`);
-    return;
+    return false;
   }
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -25,5 +28,9 @@ export async function emailPhotographer(env: Env, subject: string, html: string)
       html,
     }),
   });
-  if (!res.ok) console.log(`[email failed ${res.status}] ${subject}: ${await res.text()}`);
+  if (!res.ok) {
+    console.log(`[email failed ${res.status}] ${subject}: ${await res.text()}`);
+    return false;
+  }
+  return true;
 }

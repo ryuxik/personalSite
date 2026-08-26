@@ -385,6 +385,10 @@ Snapshot at the time of writing, grouped by what it costs you to leave it:
 
 ## Selects — client galleries: provisioning & deploy
 
+**Merge order warning:** once the `selects` branch is merged, `wrangler deploy`
+validates the R2 bucket and D1 database bindings — merging BEFORE steps 1–2 below
+blocks every site deploy (including unrelated typo fixes) until they run.
+
 One-time, in this order (needs the Cloudflare account + Resend):
 
 1. `npx wrangler r2 bucket create selects-media`

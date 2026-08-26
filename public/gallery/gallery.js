@@ -98,7 +98,7 @@
       const thumbs = marked
         .map((stem) => {
           const img = $(`.frame[data-stem="${CSS.escape(stem)}"] img`);
-          return img ? `<img src="${img.currentSrc || img.src}" alt="${stem}">` : '';
+          return img ? `<img src="${img.currentSrc || img.src}" alt="${esc(stem)}">` : '';
         })
         .join('');
       openSheet(`
@@ -140,7 +140,7 @@
 
   function openComments(stem) {
     askName(async () => {
-      openSheet(`<h2>Notes on ${stem}</h2>
+      openSheet(`<h2>Notes on ${esc(stem)}</h2>
         <ul class="thread" id="thread"><li><p class="what">Loading…</p></li></ul>
         <label>Ask for an edit or leave a note — Santiago reads these.
           <textarea id="comment-body" maxlength="4000"></textarea></label>
@@ -199,7 +199,7 @@
   function openDownloads(stem) {
     const p = photos.get(stem);
     if (!p || p.downloads.length === 0) return;
-    openSheet(`<h2>Download ${stem}</h2>
+    openSheet(`<h2>Download ${esc(stem)}</h2>
       <ul class="dl-list">${p.downloads
         .map((d) => `<li><a href="${d.href}"><span>${KIND_LABEL[d.kind] || d.kind}</span><span class="size">${fmtBytes(d.bytes)}</span></a></li>`)
         .join('')}</ul>
@@ -249,6 +249,7 @@
     const img = $('img', lightbox);
     img.loading = 'eager';
     img.sizes = '100vw';
+    $$('source', lightbox).forEach((s) => { s.sizes = '100vw'; });
     $('.lightbox__nav--prev', lightbox).addEventListener('click', () => step(-1));
     $('.lightbox__nav--next', lightbox).addEventListener('click', () => step(1));
     $('.lightbox__close', lightbox).addEventListener('click', closeLightbox);

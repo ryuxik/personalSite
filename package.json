@@ -14,7 +14,7 @@
     "predev": "npm run generate",
     "dev": "astro dev",
     "prebuild": "npm run generate",
-    "build": "astro check && astro build",
+    "build": "astro check && npm run gallery:check && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "placeholders": "node scripts/make-placeholders.mjs",

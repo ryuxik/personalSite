@@ -390,11 +390,16 @@ daily cron). Client assets: `public/gallery/`, `public/admin/` (site tokens rest
 the Worker renders outside the Astro build). Bindings: R2 `selects-media`,
 D1 `selects-db`, daily cron. See docs/LAUNCH.md § Selects for provisioning.
 
-**The link is the credential.** `/g/<slug>-<key>`, key = 16 base32 chars (80 bits).
-Media rides key-versioned paths (`…/m/<kv>/…`), cached ≤1h, so rotating the key kills
-leaked URLs within the hour — the stated rotation SLA. Wrong key, expired, deleted and
-never-existed all resolve to one identical tombstone. Clients have no accounts: a name
-chip (localStorage) attributes marks and comments.
+**The link is the credential.** `/g/<slug>-<key>`, key = 16 base32 chars (80 bits,
+rejection-sampled). Media rides key-versioned paths (`…/m/<kv>/…`) with
+`Cache-Control: private, max-age=3600` — never shared caches, and Worker responses are
+not edge-cached, so server-side revocation (rotation, draft, expiry, delete) is INSTANT
+for new requests; the only residue is the legitimate viewer's own browser cache (≤1h).
+Draft conceals everything except the "not yet ready" shell — media, downloads, zips and
+the API all tombstone. Wrong key, expired, deleted and never-existed all resolve to one
+identical tombstone. Clients have no accounts: a name chip (localStorage) attributes
+marks and comments. Viewer names persist in the records (marks, threads, events) — an
+erasure request means deleting those rows by hand.
 
 **Ingest is local and the server never decodes an image.** Verified 2026-08-26:
 nothing server-side turns HEIC HDR into a gain-map JPEG (sharp/libvips prebuilts have
@@ -410,22 +415,37 @@ JPEG in the system and is never downloadable; every deliverable is HEIC
 (original / instagram 1080×1440 / rednote 1242×1656 — Grain Studio's checklist 1:1).
 
 **Marks ("mark your N for polish", N default 3).** One shared set per gallery, hard
-cap with a swap nudge, explicit finalize (locks + emails Santiago), photographer
-reopen. Re-ingesting a stem with --replace bumps its version: marks and threads
-survive, the client sees an "updated" chip — the polish loop IS delivery.
+cap enforced atomically in SQL (concurrent viewers cannot exceed N), explicit finalize
+(locks + emails Santiago; refuses an empty set), photographer reopen. Re-ingesting a
+stem with --replace bumps its version ONLY when the original's content changed (bytes +
+CRC32 against the server record); an unchanged re-run is a no-op and a partial earlier
+run is healed gap-by-gap without a bump. Marks and threads survive; the client sees an
+"updated" chip — the polish loop IS delivery. Display order is stem sort (filename
+order = display order, same as the portfolio).
 
 **Zips stream, nothing is "prepared".** STORE-mode (HEIC doesn't compress), CRC32s
 from ingest, exact Content-Length, guard at 3.8 GB. Singles and zips serve R2 bytes
 verbatim — the system never re-encodes a delivery file.
 
 **Lifecycle.** draft → live → (marks submitted → polishing via versions) → expiry.
-Daily cron: T−14/T−3 photographer emails (Resend; clients get the in-gallery banner —
-v1 collects no client address), expiry moves bytes to `trash/` with a 7-day grace
-before purge, a reconciliation pass emails about R2 prefixes the DB doesn't know, and
-comment digests. Never R2 lifecycle rules (they'd fight the Extend button). Deletion
-keeps the paper trail: titles, threads, mark lists and events survive as rows.
+Deletion is LOGICAL: expiry (of live AND draft galleries) or a typed-confirm delete
+tombstones instantly and stamps `purge_after = +7 days`; the bytes are untouched until
+the purge pass batch-deletes them — so "undo" is a one-click restore within the grace,
+and no copy storm ever runs (an earlier trash/-prefix design would have blown the
+Workers subrequest cap). Photo removal is soft the same way. Daily cron stages each run
+isolated (one failure never blocks deletion): T−14/T−3 photographer emails whose flags
+commit ONLY on Resend acceptance, expiry, the two purge passes, a reconciliation pass
+(no-record prefixes AND purge-incomplete leftovers), and a capped comment digest.
+Never R2 lifecycle rules (they'd fight the Extend button). The paper trail — titles,
+threads, mark lists, events — survives as rows.
 
-**Admin** (`/admin`, Cloudflare Access in production + SELECTS_ADMIN_TOKEN bearer):
-coverage matrix (photo × original/instagram/rednote/preview/ladder), share panel with
-rotate, marks view with Copy filenames + reopen, feedback threads with reply/resolve,
-extend / archive-zip / typed-confirm delete.
+**Admin** (`/admin`, Cloudflare Access in production + SELECTS_ADMIN_TOKEN underneath):
+browser sessions bootstrap by POSTing the token to `/admin/session` (never a query
+string — that would persist the secret in history and edge logs); the cookie stores an
+HMAC-derived value, all compares are timing-safe. Coverage matrix (thumbnails via an
+authed admin media route, so drafts render), share panel with rotate, marks view with
+Copy filenames + reopen, feedback threads with reply/resolve, extend / archive-zip /
+typed-confirm delete / restore-within-grace. Uploads are verified against their
+declared size after the R2 put. The ingest gates fail closed: no preview gain map,
+unreadable metadata, GPS tags, or a non-upright HDR preview all refuse with an
+explicit override flag.

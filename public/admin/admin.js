@@ -39,6 +39,14 @@
         title: f.get('title'), client: f.get('client'),
         n: Number(f.get('n')), expiry_days: Number(f.get('expiry_days')),
       }});
+      if (r.existed) {
+        // A slug collision must never silently merge two clients' shoots.
+        const open = confirm(
+          `A gallery "${r.gallery.slug}" already exists` +
+          (r.gallery.client_name ? ` (client: ${r.gallery.client_name})` : '') +
+          `.\n\nOK opens the EXISTING gallery. Cancel to pick a different title/slug.`);
+        if (!open) return;
+      }
       location.href = `/admin/g/${r.gallery.id}`;
     });
     return;
@@ -61,7 +69,9 @@
       <div class="share-row">
         <span class="url">${location.host}/g/<b>${esc(g.slug)}</b>-${g.access_key}</span>
         <button class="btn" id="copy-link">Copy link</button>
-        <button class="btn--quiet btn" id="toggle-status">${g.status === 'live' ? 'Back to draft' : 'Go live'}</button>
+        <button class="btn--quiet btn" id="toggle-status">${
+          g.status === 'deleted' ? (g.purge_after ? 'Restore (within grace)' : 'Purged — re-ingest')
+          : g.status === 'live' ? 'Back to draft' : 'Go live'}</button>
         <button class="btn--quiet btn" id="rotate">Rotate link</button>
       </div>
       <p class="muted">Rotating kills every old copy of the link (old cached image URLs die within the hour).</p>`;
@@ -71,7 +81,10 @@
       setTimeout(() => (e.target.textContent = 'Copy link'), 1200);
     });
     $('#toggle-status').addEventListener('click', async () => {
-      await api(`galleries/${id}`, { method: 'PATCH', body: { status: g.status === 'live' ? 'draft' : 'live' } });
+      if (g.status === 'deleted' && !g.purge_after) return alert('This gallery was purged — its bytes are gone. Re-ingest to rebuild it.');
+      try {
+        await api(`galleries/${id}`, { method: 'PATCH', body: { status: g.status === 'live' ? 'draft' : 'live' } });
+      } catch (e) { alert(e.message); }
       load();
     });
     $('#rotate').addEventListener('click', async () => {
@@ -80,21 +93,23 @@
       load();
     });
 
-    /* coverage matrix */
-    const mediaBase = (p, kind) => `/g/${g.slug}-${g.access_key}/m/${g.key_version}/${p.id}/${kind}`;
+    /* coverage matrix — thumbnails come through the AUTHED media route, so
+       they work on drafts (the capability URL now hides draft media) */
+    const mediaBase = (p, kind) => `/api/admin/galleries/${g.id}/media/${p.id}/${kind}`;
     $('#matrix-body').innerHTML = `<div class="table-scroll"><table class="matrix">
       <thead><tr><th></th><th>Photo</th>${SHOWN.map((k) => `<th>${k}</th>`).join('')}<th>Ladder</th><th>State</th></tr></thead>
       <tbody>${photos.map((p) => {
         const cell = (k) => p.assets[k]
           ? `<td class="ok">✓ ${fmtBytes(p.assets[k].bytes)}</td>`
           : '<td class="miss">—</td>';
-        const rungs = ['l900', 'l1400', 'l2048'].filter((k) => p.assets[k]).length;
+        const rungKeys = Object.keys(p.assets).filter((k) => /^l\d+$/.test(k));
+        const rungs = rungKeys.length;
         const missing = SHOWN.filter((k) => !p.assets[k]);
         return `<tr>
           <td>${p.assets.l900 ? `<img class="thumb" src="${mediaBase(p, 'l900')}" alt="">` : '<span class="thumb"></span>'}</td>
           <td>${p.marked ? '<span class="mark">●</span> ' : ''}${esc(p.stem)}${p.version > 1 ? ` <span class="muted">v${p.version}</span>` : ''}</td>
           ${SHOWN.map(cell).join('')}
-          <td class="${rungs === 3 ? 'ok' : 'miss'}">${rungs}/3</td>
+          <td class="${rungs > 0 ? 'ok' : 'miss'}">${rungs} rung${rungs === 1 ? '' : 's'}</td>
           <td class="${missing.length ? 'miss' : 'ok'}">${missing.length ? 'missing ' + missing.join(', ') : 'ready'}</td>
         </tr>`;
       }).join('')}</tbody></table></div>
@@ -131,7 +146,7 @@
               ${c.resolved ? '' : '<button data-op="resolve">Mark addressed</button>'}
             </div>`}
           </li>`).join('')}</ul>`;
-    $('#threads-body').addEventListener('click', async (e) => {
+    $('#threads-body').onclick = async (e) => {  // property assignment: re-running load() must not stack handlers
       const op = e.target.dataset?.op;
       if (!op) return;
       const cid = e.target.closest('li').dataset.cid;
@@ -140,7 +155,7 @@
         const body = prompt('Reply (the client sees this in the photo’s thread):');
         if (body) { await api(`comments/${cid}/reply`, { method: 'POST', body: { body } }); load(); }
       }
-    });
+    };
 
     /* lifecycle */
     $('#lifecycle-body').innerHTML = `
