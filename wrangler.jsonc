@@ -32,6 +32,11 @@
     // wrangler dev --local works with the placeholder untouched.
     { "binding": "DB", "database_name": "selects-db", "database_id": "1964cf37-0334-4034-9277-3167153eeb9f" }
   ],
+  // Cloudflare-native outbound email (free): requires Email Routing enabled
+  // on the zone with the destination address verified — docs/LAUNCH.md § Selects
+  // step 6. Until then this binding still deploys; sends fail over to Resend
+  // (if configured) or log as no-ops without losing notification state.
+  "send_email": [{ "name": "NOTIFY" }],
   "triggers": {
     // Daily lifecycle pass: expiry warnings, trash-grace deletes, purge,
     // storage-vs-DB reconciliation, comment digest. worker/cron.ts.

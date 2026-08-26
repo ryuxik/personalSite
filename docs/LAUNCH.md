@@ -396,14 +396,27 @@ One-time, in this order (needs the Cloudflare account + Resend):
 3. `npx wrangler secret put SELECTS_ADMIN_TOKEN` — generate something long
    (`openssl rand -hex 24`); the same value goes in your shell env as
    `SELECTS_ADMIN_TOKEN` for the ingest CLI.
-4. Email (optional, photographer-only): verify `mail.ryuxik.io` in Resend (the apex
-   stays MX/TXT-free — § 5), then `npx wrangler secret put RESEND_API_KEY`. Without
-   it every send is a logged no-op. Test cold-start deliverability to Gmail + iCloud
-   before relying on the T−14 warnings.
+4. Email (optional, photographer-only) — CLOUDFLARE-NATIVE, no vendor: dashboard →
+   ryuxik.io zone → **Email → Email Routing → enable** (it adds MX/TXT to the apex —
+   this supersedes § 5's "no MX" stance, and gives you inbound hello@ryuxik.io
+   forwarding as a bonus), then add **ryuxik@gmail.com as a destination address** and
+   click its verification email. The worker's `send_email` binding (NOTIFY in
+   wrangler.jsonc) then delivers from selects@ryuxik.io for free. Until Routing is
+   enabled, sends fail over to Resend if RESEND_API_KEY is set, else log as no-ops —
+   and notification flags only commit on an accepted send, so nothing is lost while
+   this step waits. Resend (`mail.ryuxik.io` + secret) remains the fallback for the
+   day native limits pinch. After enabling, send yourself a test (post a comment on a
+   test gallery; the daily digest at 06:17 UTC delivers it) and check it lands in the
+   Gmail inbox, not spam.
 5. Cloudflare Access (Zero Trust → Applications): self-hosted app for
-   `ryuxik.io/admin*` and `ryuxik.io/api/admin*`, allow only your identity. The
-   Worker's bearer/cookie check still applies underneath (the CLI authenticates with
-   the token; Access service tokens can come later).
+   `ryuxik.io/admin*`, allow only your identity — DONE 2026-08-26 (team
+   lucky-star-0196). Covering `ryuxik.io/api/admin*` too blocks the ingest CLI's
+   bearer at the edge; either leave the API to the worker's token auth, or add an
+   Access **Service Auth** policy + service token and export CF_ACCESS_CLIENT_ID /
+   CF_ACCESS_CLIENT_SECRET (the CLI sends them automatically). NOTE: the
+   `personalsite.ryuxik.workers.dev` origin serves the same worker OUTSIDE the zone's
+   Access — disable it (Worker → Settings → Domains & Routes → workers.dev off) once
+   the CLI question is settled, or Access on the API is decorative.
 6. `npm run gallery:deploy` (= build + `wrangler deploy`). The D1 schema applies
    itself on first touch. The daily cron (06:17 UTC) is in wrangler.jsonc.
 7. Cache rule sanity: gallery media sets its own `Cache-Control: max-age=3600` —

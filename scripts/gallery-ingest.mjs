@@ -87,6 +87,12 @@ if (!TOKEN) {
   process.exit(2);
 }
 const AUTH = { Authorization: `Bearer ${TOKEN}` };
+// Optional: Cloudflare Access service token (Zero Trust → Service Auth) when
+// /api/admin sits behind an Access app — set both or neither.
+if (process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET) {
+  AUTH['CF-Access-Client-Id'] = process.env.CF_ACCESS_CLIENT_ID;
+  AUTH['CF-Access-Client-Secret'] = process.env.CF_ACCESS_CLIENT_SECRET;
+}
 
 /* ------------------------------------------------------------- gathering -- */
 const dir = resolve(folder);
@@ -243,9 +249,15 @@ async function averageColor(previewBuffer) {
  * portfolio's exact non-negotiable: keepGainMap + resize + jpeg, NOTHING
  * else; AVIF from a plain rotated read (= the authored SDR base). */
 async function deriveRungs(set, width) {
-  const input = set.isHdr ? sharp(set.previewBuffer).keepGainMap() : sharp(set.previewBuffer).rotate();
+  // SDR sources can carry non-sRGB primaries (a Rec.2020 SDR TIFF taught us
+  // this the hard way) — the profile must survive every rung. The HDR chain
+  // stays EXACTLY keepGainMap+resize+jpeg per SPEC; its output already
+  // carries an ICC from libultrahdr.
+  const input = set.isHdr
+    ? sharp(set.previewBuffer).keepGainMap()
+    : sharp(set.previewBuffer).rotate().keepIccProfile();
   const jpg = await input.resize({ width }).jpeg({ quality: JPEG_QUALITY }).toBuffer({ resolveWithObject: true });
-  const avif = await sharp(set.previewBuffer).rotate().resize({ width }).avif({ quality: AVIF_QUALITY }).toBuffer({ resolveWithObject: true });
+  const avif = await sharp(set.previewBuffer).rotate().keepIccProfile().resize({ width }).avif({ quality: AVIF_QUALITY }).toBuffer({ resolveWithObject: true });
   return { jpg, avif };
 }
 

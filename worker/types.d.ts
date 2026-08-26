@@ -66,6 +66,19 @@ declare class FixedLengthStream {
   readonly writable: WritableStream<Uint8Array>;
 }
 
+/** Email Routing send_email binding — Cloudflare-native outbound email:
+ * free, no vendor, no API key; destination must be a verified Email Routing
+ * address on this zone (exactly our photographer-only model). */
+interface SendEmailBinding {
+  send(message: unknown): Promise<void>;
+}
+
+declare module 'cloudflare:email' {
+  export class EmailMessage {
+    constructor(from: string, to: string, raw: string);
+  }
+}
+
 interface Fetcher {
   fetch(request: Request | string): Promise<Response>;
 }
@@ -85,7 +98,10 @@ interface Env {
   DB: D1Database;
   /** Secret — bearer for /api/admin/* and the ingest CLI. Unset = admin disabled. */
   SELECTS_ADMIN_TOKEN?: string;
-  /** Secret — Resend API key. Unset = email is a silent no-op (logged). */
+  /** Email Routing send_email binding (preferred path). Absent until the
+   * binding ships in wrangler.jsonc AND Email Routing is enabled on the zone. */
+  NOTIFY?: SendEmailBinding;
+  /** Secret — Resend API key: the FALLBACK email path. Unset = no fallback. */
   RESEND_API_KEY?: string;
   PHOTOGRAPHER_EMAIL?: string;
   EMAIL_FROM?: string;
