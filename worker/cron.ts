@@ -174,6 +174,35 @@ export async function runCron(env: Env): Promise<void> {
       }
     }],
 
+    // ---- usage watch: the one open-ended cost is R2 storage ------------------
+    // (egress is free, request overage is pennies; auto-delete bounds storage,
+    // but a busy season can still cross the 10 GB free tier — say so BEFORE
+    // the invoice does. No more than one alert email per week.)
+    ['usage-watch', async () => {
+      const FREE_TIER_BYTES = 10 * 1024 ** 3;
+      const WARN_AT = 0.8 * FREE_TIER_BYTES;
+      const row = await db
+        .prepare("SELECT COALESCE(SUM(bytes), 0) AS total FROM assets WHERE r2_key != ''")
+        .first<{ total: number }>();
+      const total = row?.total ?? 0;
+      if (total < WARN_AT) return;
+      const recent = await db
+        .prepare("SELECT 1 FROM events WHERE type = 'usage-alert' AND created_at > datetime('now', '-7 days') LIMIT 1")
+        .first();
+      if (recent) return;
+      const gb = (total / 1024 ** 3).toFixed(1);
+      const sent = await emailPhotographer(
+        env,
+        `Selects — storage at ${gb} GB (free tier ends at 10 GB)`,
+        `<p>Galleries currently hold <strong>${gb} GB</strong> in R2. Beyond 10 GB,
+         storage bills ~$0.015/GB-month (≈ $0.02 per 90-photo gallery). To stay free:
+         delete delivered galleries early (admin → Delete — bytes purge after the 7-day
+         grace, records survive) or shorten expiries. Nothing breaks either way; this
+         is a heads-up, not a failure.</p>`
+      );
+      if (sent) await logEvent(db, null, 'usage-alert', `${total} bytes stored`);
+    }],
+
     // ---- comment digest (capped; unsent stay unflagged for the next run) ----
     ['digest', async () => {
       const fresh = await db
