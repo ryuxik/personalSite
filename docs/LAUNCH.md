@@ -411,12 +411,14 @@ One-time, in this order (needs the Cloudflare account + Resend):
 5. Cloudflare Access (Zero Trust → Applications): self-hosted app for
    `ryuxik.io/admin*`, allow only your identity — DONE 2026-08-26 (team
    lucky-star-0196). Covering `ryuxik.io/api/admin*` too blocks the ingest CLI's
-   bearer at the edge; either leave the API to the worker's token auth, or add an
-   Access **Service Auth** policy + service token and export CF_ACCESS_CLIENT_ID /
-   CF_ACCESS_CLIENT_SECRET (the CLI sends them automatically). NOTE: the
-   `personalsite.ryuxik.workers.dev` origin serves the same worker OUTSIDE the zone's
-   Access — disable it (Worker → Settings → Domains & Routes → workers.dev off) once
-   the CLI question is settled, or Access on the API is decorative.
+   bearer at the edge; SETTLED 2026-08-26: the app
+   covers both paths with an identity policy (browser) plus a **Service Auth**
+   policy for the `selects-ingest` token; the CLI reads CF_ACCESS_CLIENT_ID /
+   CF_ACCESS_CLIENT_SECRET from the shell (~/.zshrc) and sends the headers
+   automatically. The workers.dev route is DISABLED in wrangler.jsonc
+   (`workers_dev: false`) so the zone's Access cannot be sidestepped. Rotating the
+   service token: Zero Trust → Access controls → Service credentials → ⋯ → Rotate
+   secret, then update ~/.zshrc.
 6. `npm run gallery:deploy` (= build + `wrangler deploy`). The D1 schema applies
    itself on first touch. The daily cron (06:17 UTC) is in wrangler.jsonc.
 7. Cache rule sanity: gallery media sets its own `Cache-Control: max-age=3600` —
