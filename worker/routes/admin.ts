@@ -35,6 +35,7 @@ import { crc32 as crc32Of, hasIsoGainMap } from '../lib/bytes';
 // Pure-JS EXIF parsing (works on HEIC and JPEG) — the GPS gate now lives in
 // the WORKER so browser ingest is held to the same standard as the CLI.
 import ExifReader from 'exifreader';
+import { verifyAccessJwt } from '../lib/access';
 
 /** Fixed kinds plus l<width>/a<width> ladder rungs — widths are dynamic since
  * a narrow master contributes its own width as the top rung (photo-meta rule). */
@@ -60,6 +61,10 @@ async function derivedCookieValue(token: string): Promise<string> {
 }
 
 async function authed(request: Request, env: Env): Promise<boolean> {
+  // A verified Cloudflare Access login (signature, issuer, audience, expiry,
+  // AND the photographer's email) is an admin session by itself — no second
+  // login. The token paths below remain for the CLI and as the fallback.
+  if (await verifyAccessJwt(env, request.headers.get('Cf-Access-Jwt-Assertion'))) return true;
   const token = env.SELECTS_ADMIN_TOKEN;
   if (!token) return false; // no token configured → admin is closed, not open
   const header = request.headers.get('Authorization') ?? '';

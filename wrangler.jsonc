@@ -51,6 +51,10 @@
     // Resend (mail.ryuxik.io — the zone apex deliberately has no MX/TXT).
     "PHOTOGRAPHER_EMAIL": "ryuxik@gmail.com",
     "EMAIL_FROM": "Selects <selects@mail.ryuxik.io>",
-    "PUBLIC_ORIGIN": "https://ryuxik.io"
+    "PUBLIC_ORIGIN": "https://ryuxik.io",
+    // Access JWT verification: a valid, signed Access login for this app (and
+    // this email) IS an admin session — the token form is the fallback only.
+    "ACCESS_TEAM_DOMAIN": "lucky-star-0196.cloudflareaccess.com",
+    "ACCESS_AUD": "a74ce4f2850c89fb3f1a3910c254620fffe603d1d5a5004c7f96f404b247bb1b"
   }
 }

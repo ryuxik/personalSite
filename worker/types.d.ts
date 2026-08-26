@@ -104,6 +104,11 @@ interface Env {
   /** Secret — Resend API key: the FALLBACK email path. Unset = no fallback. */
   RESEND_API_KEY?: string;
   PHOTOGRAPHER_EMAIL?: string;
+  /** Zero Trust team domain (e.g. lucky-star-0196.cloudflareaccess.com) and the
+   * Access application's AUD tag — set both to let a verified Access JWT act
+   * as an admin session (no token form for the browser). */
+  ACCESS_TEAM_DOMAIN?: string;
+  ACCESS_AUD?: string;
   EMAIL_FROM?: string;
   PUBLIC_ORIGIN?: string;
 }
