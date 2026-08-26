@@ -10,7 +10,7 @@
 //
 // Provisioning (once, see docs/LAUNCH.md § Selects):
 //   npx wrangler r2 bucket create selects-media
-//   npx wrangler d1 create selects-db        → paste database_id below
+//   npx wrangler d1 create selects-db        → database_id below (created 2026-08-26)
 //   npx wrangler secret put SELECTS_ADMIN_TOKEN
 //   npx wrangler secret put RESEND_API_KEY   (optional — email is a no-op without it)
 {
@@ -30,7 +30,7 @@
   "d1_databases": [
     // database_id is filled in after `npx wrangler d1 create selects-db`;
     // wrangler dev --local works with the placeholder untouched.
-    { "binding": "DB", "database_name": "selects-db", "database_id": "00000000-0000-0000-0000-000000000000" }
+    { "binding": "DB", "database_name": "selects-db", "database_id": "1964cf37-0334-4034-9277-3167153eeb9f" }
   ],
   "triggers": {
     // Daily lifecycle pass: expiry warnings, trash-grace deletes, purge,
