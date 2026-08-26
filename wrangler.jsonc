@@ -17,6 +17,10 @@
   "name": "personalsite",
   "main": "worker/index.ts",
   "compatibility_date": "2026-08-01",
+  // The workers.dev origin would serve this same Worker OUTSIDE the zone's
+  // Cloudflare Access — with Access + a service token in force on ryuxik.io,
+  // that side door must stay shut (review finding).
+  "workers_dev": false,
   "assets": {
     "directory": "./dist",
     "html_handling": "auto-trailing-slash",
