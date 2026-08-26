@@ -97,7 +97,17 @@ async function load() {
     const title = prompt('Gallery title (what the client sees):', g.title);
     if (title === null) return;
     const client = prompt('Client name (optional):', g.client_name || '');
-    await api(`galleries/${id}`, { method: 'PATCH', body: { ...(title.trim() ? { title } : {}), ...(client !== null ? { client } : {}) } });
+    const slugPreview = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || g.slug;
+    const moveLink = slugPreview !== g.slug && confirm(
+      `Also move the link to match?\n\nNew: ${location.host}/g/${slugPreview}-${g.access_key}\nOld: …/g/${g.slug}-… stops working IMMEDIATELY.\n\nOK = move the link · Cancel = keep the current link`);
+    try {
+      await api(`galleries/${id}`, { method: 'PATCH', body: {
+        ...(title.trim() ? { title } : {}),
+        ...(client !== null ? { client } : {}),
+        ...(moveLink ? { slug: title } : {}),
+      } });
+    } catch (e) { alert(e.message); }
     load();
   });
 

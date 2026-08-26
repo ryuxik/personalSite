@@ -60,6 +60,7 @@
   const finalizeBtn = $('#tray-finalize');
 
   function paintMarks() {
+    banner();
     $$('.frame').forEach((f) => f.classList.toggle('marked', marked.includes(f.dataset.stem)));
     tray.hidden = false;
     trayCount.textContent =
@@ -242,10 +243,18 @@
     const stem = order[lbIndex];
     const pic = $(`.frame[data-stem="${CSS.escape(stem)}"] picture`);
     if (!pic) return;
+    const isMarked = marked.includes(stem);
     lightbox.innerHTML = `${pic.outerHTML}
       <button class="lightbox__nav lightbox__nav--prev" aria-label="Previous"></button>
       <button class="lightbox__nav lightbox__nav--next" aria-label="Next"></button>
-      <button class="lightbox__close" aria-label="Close">×</button>`;
+      <button class="lightbox__close" aria-label="Close">×</button>
+      <div class="lightbox__bar">
+        <button class="act${isMarked ? ' is-marked' : ''}" data-lb="mark">
+          <span class="ring"></span>${isMarked ? 'Marked' : 'Mark for polish'}
+        </button>
+        <button class="act" data-lb="comment">✎ Note</button>
+        <button class="act" data-lb="download">↓ Download</button>
+      </div>`;
     const img = $('img', lightbox);
     img.loading = 'eager';
     img.sizes = '100vw';
@@ -253,6 +262,34 @@
     $('.lightbox__nav--prev', lightbox).addEventListener('click', () => step(-1));
     $('.lightbox__nav--next', lightbox).addEventListener('click', () => step(1));
     $('.lightbox__close', lightbox).addEventListener('click', closeLightbox);
+    $('[data-lb="mark"]', lightbox).addEventListener('click', () => {
+      toggleMarkFromLightbox(stem);
+    });
+    $('[data-lb="comment"]', lightbox).addEventListener('click', () => {
+      closeLightbox();
+      openComments(stem);
+    });
+    $('[data-lb="download"]', lightbox).addEventListener('click', () => {
+      closeLightbox();
+      openDownloads(stem);
+    });
+  }
+  function toggleMarkFromLightbox(stem) {
+    if (marksState === 'submitted') { closeLightbox(); return toggleMark(stem); }
+    askName(async () => {
+      const on = !marked.includes(stem);
+      try {
+        const r = await api('mark', { stem, on });
+        marked = r.marked;
+        paintMarks();
+        renderLightbox(); // refresh the bar's marked state
+      } catch (err) {
+        closeLightbox();
+        openSheet(`<h2>All ${state.cap} marked</h2><p>${err.message}</p>
+          <div class="sheet__row"><button class="btn btn--quiet" id="sheet-ok">Close</button></div>`);
+        $('#sheet-ok').addEventListener('click', closeSheet);
+      }
+    });
   }
   function step(d) { lbIndex = (lbIndex + d + order.length) % order.length; renderLightbox(); }
   function closeLightbox() {
@@ -276,19 +313,23 @@
   }, { passive: true });
 
   /* --------------------------------------------------------------- expiry */
-  (function banner() {
+  function banner() {
     const el = $('#banner');
     const msLeft = new Date(state.expiry) - Date.now();
     const days = Math.ceil(msLeft / 86400000);
     const until = new Date(state.expiry).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
     el.hidden = false;
-    if (days <= 7) {
-      el.classList.add('urgent');
+    el.classList.toggle('urgent', days <= 7);
+    if (marksState === 'open' && marked.length === 0) {
+      // guidance until the first mark lands — the single most-missed action
+      el.textContent = `Tap “Mark for polish” under your favorite frames — choose up to ${state.cap}. Available until ${until}.`;
+    } else if (days <= 7) {
       el.textContent = `This gallery closes in ${days} day${days === 1 ? '' : 's'} — download what you want to keep.`;
     } else {
       el.textContent = `Available until ${until}.`;
     }
-  })();
+  }
+  banner();
 
   /* ---------------------------------------------------------------- wire */
   function esc(s) { const d = document.createElement('span'); d.textContent = s; return d.innerHTML; }

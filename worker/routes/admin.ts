@@ -198,6 +198,18 @@ async function patchGallery(request: Request, env: Env, gallery: GalleryRow): Pr
     await db.prepare('UPDATE galleries SET client_name = ? WHERE id = ?')
       .bind(body.client.trim().slice(0, 120), gallery.id).run();
   }
+  if (typeof body.slug === 'string' && body.slug.trim()) {
+    // Personalized URLs track the shoot name (original requirement): changing
+    // the slug moves the gallery to a new link — the old one dies instantly,
+    // same revocation semantics as a key rotation.
+    const newSlug = slugify(body.slug);
+    if (newSlug !== gallery.slug) {
+      const clash = await galleryBySlug(env.DB, newSlug);
+      if (clash) return json({ error: `the link name "${newSlug}" is already used by another gallery` }, 409);
+      await db.prepare('UPDATE galleries SET slug = ? WHERE id = ?').bind(newSlug, gallery.id).run();
+      await logEvent(db, gallery.id, 'slug-changed', `${gallery.slug} → ${newSlug} (old link dead)`);
+    }
+  }
   if (body.status === 'live' || body.status === 'draft') {
     if (gallery.status === 'deleted') {
       // Logical deletion makes restore-within-grace a real feature — but a

@@ -412,9 +412,11 @@ async function galleryPage(env: Env, ctx: GalleryContext): Promise<Response> {
   </picture>
   ${updated}
   <div class="frame__actions">
-    <button class="act act--mark" data-act="mark" aria-label="Mark for polish"><span class="ring"></span></button>
-    <button class="act act--comment" data-act="comment" aria-label="Comment">✎<span class="act__count"></span></button>
-    <button class="act act--dl" data-act="download" aria-label="Download">↓</button>
+    <button class="act act--mark" data-act="mark">
+      <span class="ring"></span><span class="when-off">Mark for polish</span><span class="when-on">Marked</span>
+    </button>
+    <button class="act act--comment" data-act="comment">✎ Note<span class="act__count"></span></button>
+    <button class="act act--dl" data-act="download">↓ Download</button>
   </div>
 </figure>`;
     })
