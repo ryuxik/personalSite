@@ -556,6 +556,7 @@ async function adminGallery(env: Env, id: number): Promise<Response> {
     <p><a href="/admin">← all galleries</a></p>
     <h1>${esc(gallery.title)}</h1>
     <p class="ahead__sub" id="summary"></p>
+    <div id="rename-slot"></div>
   </header>
   <section class="panel" id="share"><h2>Share</h2><div id="share-body"></div></section>
   <section class="panel" id="ingest"><h2>Add photos</h2><div id="ingest-body"></div></section>

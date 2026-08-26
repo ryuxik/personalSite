@@ -88,27 +88,76 @@ async function load() {
   const { gallery: g, photos, comments } = await api(`galleries/${id}`);
   const link = `${location.origin}/g/${g.slug}-${g.access_key}`;
 
+  // The H1 is server-rendered; without this a successful rename looks like a
+  // no-op until a hard reload.
+  document.querySelector('.ahead h1').textContent = g.title;
+  document.title = `${g.title} · Selects admin`;
+
   $('#summary').innerHTML = `<span class="chip ${g.status}">${g.status}</span>
     ${g.marks_state === 'submitted' ? '<span class="chip submitted">marks in</span>' : ''}
     ${photos.length} photo(s) · mark ${g.n_marks} · until ${g.expiry_at.slice(0, 10)}
     ${g.client_name ? ` · client: ${esc(g.client_name)}` : ''}
     <button class="linklike" id="rename">rename…</button>`;
-  $('#rename').addEventListener('click', async () => {
-    const title = prompt('Gallery title (what the client sees):', g.title);
-    if (title === null) return;
-    const client = prompt('Client name (optional):', g.client_name || '');
-    const slugPreview = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || g.slug;
-    const moveLink = slugPreview !== g.slug && confirm(
-      `Also move the link to match?\n\nNew: ${location.host}/g/${slugPreview}-${g.access_key}\nOld: …/g/${g.slug}-… stops working IMMEDIATELY.\n\nOK = move the link · Cancel = keep the current link`);
-    try {
-      await api(`galleries/${id}`, { method: 'PATCH', body: {
-        ...(title.trim() ? { title } : {}),
-        ...(client !== null ? { client } : {}),
-        ...(moveLink ? { slug: title } : {}),
-      } });
-    } catch (e) { alert(e.message); }
-    load();
+
+  // Inline rename form. Never prompt()/confirm() chains here: Chrome throttles
+  // stacked native dialogs ("prevent this page from creating additional
+  // dialogs"), and a suppressed dialog returns null instantly — the whole
+  // rename silently did nothing. A form can't be suppressed and reports
+  // errors in place.
+  const slugOf = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+  const escAttr = (s) => esc(s).replace(/"/g, '&quot;');
+  const slot = $('#rename-slot');
+  slot.innerHTML = '';
+  $('#rename').addEventListener('click', () => {
+    if (slot.firstElementChild) { slot.innerHTML = ''; return; }
+    slot.innerHTML = `
+      <form class="rename-form">
+        <label>Title (what the client sees)
+          <input name="title" required maxlength="120" value="${escAttr(g.title)}"></label>
+        <label>Client name (optional)
+          <input name="client" maxlength="120" value="${escAttr(g.client_name || '')}"></label>
+        <label class="chk rename-form__move" hidden>
+          <input type="checkbox" name="move">
+          <span>Move the link to match → <b class="url" data-preview></b><br>
+            <span class="muted">the current link stops working the moment you save</span></span></label>
+        <p class="rename-form__row">
+          <button class="btn" type="submit">Save</button>
+          <button class="btn btn--quiet" type="button" data-cancel>Cancel</button>
+          <span class="muted" data-msg></span></p>
+      </form>`;
+    const form = slot.firstElementChild;
+    const els = form.elements;
+    const moveRow = form.querySelector('.rename-form__move');
+    const msg = form.querySelector('[data-msg]');
+    let typed = false;
+    const syncMove = () => {
+      const s = slugOf(els.title.value);
+      const wasHidden = moveRow.hidden;
+      moveRow.hidden = !s || s === g.slug;
+      // Opt-in when the mismatch predates this edit; auto-check the moment
+      // the user types a new name (that is what rename means to them).
+      if (typed && wasHidden && !moveRow.hidden) els.move.checked = true;
+      form.querySelector('[data-preview]').textContent = `${location.host}/g/${s || g.slug}-${g.access_key}`;
+    };
+    syncMove();
+    els.title.addEventListener('input', () => { typed = true; syncMove(); });
+    form.querySelector('[data-cancel]').onclick = () => (slot.innerHTML = '');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const title = els.title.value.trim();
+      const wantMove = !moveRow.hidden && els.move.checked;
+      msg.textContent = 'Saving…';
+      try {
+        await api(`galleries/${id}`, { method: 'PATCH', body: {
+          ...(title ? { title } : {}),
+          client: els.client.value,
+          ...(wantMove ? { slug: title } : {}),
+        } });
+        load();
+      } catch (err) { msg.textContent = err.message; }
+    };
+    els.title.focus();
   });
 
   /* share */

@@ -92,3 +92,10 @@ table.matrix { border-collapse: collapse; width: 100%; font-variant-numeric: tab
 #ing-status .ok { color: var(--good); }
 #ing-status .miss { color: var(--warn); }
 .linklike { background: none; border: none; padding: 0; color: var(--accent); font: inherit; font-size: 0.8125rem; cursor: pointer; text-decoration: underline; text-underline-offset: 0.15em; }
+
+/* Inline rename form (replaces the prompt() chain Chrome loves to suppress) */
+.rename-form { margin: 0.9rem 0 0.25rem; padding: 0.9rem 1rem; border: 1px solid var(--line); background: var(--card); display: grid; gap: 0.65rem; max-width: 34rem; font-size: 0.8125rem; color: var(--ink-soft); }
+.rename-form label { display: block; }
+.rename-form label.chk { display: flex; align-items: flex-start; }
+.rename-form__move .url { color: var(--accent); word-break: break-all; }
+.rename-form__row { display: flex; gap: 0.5rem; align-items: center; margin: 0; }
