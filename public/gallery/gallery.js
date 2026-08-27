@@ -399,7 +399,7 @@
       el.textContent = `Tap “Mark for polish” under your favorite frames — choose up to ${state.cap}. Available until ${until}.`;
     } else if (marksState === 'submitted' && vetoed.length === 0) {
       // round 2 — social consent: guide until the first veto (or expiry urgency)
-      el.textContent = `Round 2 — tap “Don’t post” on any frame you’d rather keep off Instagram or RedNote. No limit, change your mind anytime — everything left untouched is OK to share.`;
+      el.textContent = `Round 2 — tap “Don’t post” on any frame you’d rather keep off Instagram or RedNote. Everything else may be shared, so decide before Santiago posts — once a photo is out, it’s out.`;
     } else if (days <= 7) {
       el.textContent = `This gallery closes in ${days} day${days === 1 ? '' : 's'} — download what you want to keep.`;
     } else {
