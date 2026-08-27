@@ -24,7 +24,7 @@
   --ink-faint: #83838B;
   --line: #232330;
   --card: #17171C;
-  --accent: #D8FF3D;
+  --accent: #D8FF3D; --warn: #FFB35C;
   --serif: "Bricolage Grotesque", Helvetica, Arial, sans-serif;
   --grotesque: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --col-wide: 1100px;
@@ -118,6 +118,18 @@ button { font: inherit; color: inherit; background: none; border: none; padding:
 .tray__dl { color: var(--ink-soft); font-weight: 500; }
 .tray__finalize { color: var(--accent); font-weight: 600; letter-spacing: 0.03em; white-space: nowrap; }
 .tray__finalize:disabled { color: var(--ink-faint); cursor: default; }
+/* Narrow screens: the pill can't fit count + actions on one line (worse now
+ * that the count can carry an "off social" suffix) — stack deliberately:
+ * count on top, actions underneath. */
+@media (max-width: 480px) {
+  .tray {
+    flex-wrap: wrap; justify-content: center; row-gap: 0;
+    font-size: 0.8125rem; gap: 1.25rem; padding: 0.5rem 1.2rem 0.55rem;
+    border-radius: 22px; max-width: calc(100vw - 1.25rem);
+  }
+  .tray__count { flex-basis: 100%; text-align: center; white-space: normal; }
+  .tray__spacer { display: none; }
+}
 
 /* ----------------------------------------------------------------- sheet */
 .sheet { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: flex-end; justify-content: center; z-index: 30; }
@@ -204,3 +216,16 @@ button { font: inherit; color: inherit; background: none; border: none; padding:
 .starters button { font-family: var(--grotesque); font-size: 0.75rem; color: var(--ink-soft); background: none; border: 1px solid var(--line); border-radius: 99px; padding: 0.3rem 0.7rem; cursor: pointer; }
 .starters button:hover, .starters button:focus-visible { border-color: var(--accent); color: var(--ink); }
 .sheet .starters__hint { font-size: 0.8125rem; color: var(--ink-faint); }
+
+/* Round 2 — social-media vetoes. Square ring distinguishes the consent
+ * action from the circular polish mark; warn color = "held back". */
+.act--veto .ring { border-radius: 5px; }
+.frame.vetoed .act--veto .when-off { display: none; }
+.frame.vetoed .act--veto .when-on { display: inline; }
+.frame.vetoed .act--veto { color: var(--warn); }
+.frame.vetoed .act--veto .ring { background: var(--warn); border-color: var(--warn); }
+.lightbox__bar .act.is-vetoed { color: var(--warn); }
+.lightbox__bar .act.is-vetoed .ring { background: var(--warn); border-color: var(--warn); }
+/* four actions per frame now — let them wrap on narrow screens */
+.frame__actions { flex-wrap: wrap; row-gap: 0; }
+.lightbox__bar { flex-wrap: wrap; row-gap: 0; column-gap: 1.1rem; }

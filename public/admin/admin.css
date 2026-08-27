@@ -99,3 +99,5 @@ table.matrix { border-collapse: collapse; width: 100%; font-variant-numeric: tab
 .rename-form label.chk { display: flex; align-items: flex-start; }
 .rename-form__move .url { color: var(--accent); word-break: break-all; }
 .rename-form__row { display: flex; gap: 0.5rem; align-items: center; margin: 0; }
+
+.subhead { font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); margin: 1.4rem 0 0.4rem; }

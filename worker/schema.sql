@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS photos (
   marked      INTEGER NOT NULL DEFAULT 0,       -- one shared mark set per gallery
   marked_by   TEXT NOT NULL DEFAULT '',
   marked_at   TEXT,
+  vetoed      INTEGER NOT NULL DEFAULT 0,      -- round 2: client consent — do NOT post on social
+  vetoed_by   TEXT NOT NULL DEFAULT '',
+  vetoed_at   TEXT,
   removed     INTEGER NOT NULL DEFAULT 0,    -- soft-removed: hidden everywhere, bytes purged after grace
   removed_at  TEXT,
   UNIQUE (gallery_id, stem)

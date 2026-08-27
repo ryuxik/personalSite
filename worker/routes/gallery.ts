@@ -244,6 +244,25 @@ async function handleApi(request: Request, env: Env, ctx: GalleryContext, rest: 
     return json(await markState(env, gallery));
   }
 
+  if (action === 'veto') {
+    // Round 2 — social-media consent. Unlike marks this is a veto right, not
+    // a selection budget: unlimited, never locks, effective immediately, and
+    // editable for the life of the gallery. Every change is audit-logged.
+    const photo = await photoByStem(env, gallery.id, String(body.stem ?? ''));
+    if (!photo) return json({ error: 'unknown photo' }, 404);
+    const on = Boolean(body.on);
+    await env.DB.prepare('UPDATE photos SET vetoed = ?, vetoed_by = ?, vetoed_at = ? WHERE id = ? AND removed = 0')
+      .bind(on ? 1 : 0, on ? viewer : '', on ? new Date().toISOString() : null, photo.id)
+      .run();
+    await logEvent(env.DB, gallery.id, on ? 'veto-added' : 'veto-removed', `${photo.stem} by ${viewer}`);
+    const rows = await env.DB.prepare(
+      'SELECT stem FROM photos WHERE gallery_id = ? AND vetoed = 1 AND removed = 0 ORDER BY stem'
+    )
+      .bind(gallery.id)
+      .all<{ stem: string }>();
+    return json({ vetoed: rows.results.map((x) => x.stem) });
+  }
+
   if (action === 'finalize') {
     const note = String(body.note ?? '').trim().slice(0, 2000);
     // The note is the retouching brief — without it Santiago is guessing at
@@ -376,6 +395,7 @@ async function galleryPage(env: Env, ctx: GalleryContext): Promise<Response> {
       version: p.version,
       replacedAt: p.replaced_at,
       marked: p.marked === 1,
+      vetoed: p.vetoed === 1,
       comments: commentCount.get(p.stem) ?? 0,
       // download menu lists only what exists — a matrix gap simply is not offered
       downloads: DELIVERABLES.flatMap((kind) => {
@@ -418,6 +438,9 @@ async function galleryPage(env: Env, ctx: GalleryContext): Promise<Response> {
   <div class="frame__actions">
     <button class="act act--mark" data-act="mark" aria-label="Mark for polish" aria-pressed="false">
       <span class="ring"></span><span class="when-off">Mark for polish</span><span class="when-on">Marked</span>
+    </button>
+    <button class="act act--veto" data-act="veto" aria-label="Don’t post on social media" aria-pressed="false">
+      <span class="ring"></span><span class="when-off">Don’t post</span><span class="when-on">Won’t be posted</span>
     </button>
     <button class="act act--comment" data-act="comment">✎ Note<span class="act__count"></span></button>
     <button class="act act--dl" data-act="download">↓ Download</button>

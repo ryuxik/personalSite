@@ -54,6 +54,7 @@
 
   /* --------------------------------------------------------------- marks */
   let marked = state.photos.filter((p) => p.marked).map((p) => p.stem);
+  let vetoed = state.photos.filter((p) => p.vetoed).map((p) => p.stem);
   let marksState = state.marksState;
   const tray = $('#tray');
   const trayCount = $('#tray-count');
@@ -67,12 +68,37 @@
       f.querySelector('[data-act="mark"]')?.setAttribute('aria-pressed', String(on));
     });
     tray.hidden = false;
+    const vetoNote = vetoed.length ? ` · ${vetoed.length} off social` : '';
     trayCount.textContent =
-      marksState === 'submitted'
+      (marksState === 'submitted'
         ? `${marked.length} sent for polish`
-        : `${marked.length} / ${state.cap} marked for polish`;
+        : `${marked.length} / ${state.cap} marked for polish`) + vetoNote;
     finalizeBtn.hidden = marksState === 'submitted';
     finalizeBtn.disabled = marked.length === 0;
+  }
+
+  function paintVetoes() {
+    $$('.frame').forEach((f) => {
+      const on = vetoed.includes(f.dataset.stem);
+      f.classList.toggle('vetoed', on);
+      f.querySelector('[data-act="veto"]')?.setAttribute('aria-pressed', String(on));
+    });
+  }
+
+  function toggleVeto(stem) {
+    askName(async () => {
+      const on = !vetoed.includes(stem);
+      try {
+        const r = await api('veto', { stem, on });
+        vetoed = r.vetoed;
+        paintVetoes();
+        paintMarks(); // tray count + banner reflect vetoes
+      } catch (err) {
+        openSheet(`<h2>Hm</h2><p>${err.message}</p>
+          <div class="sheet__row"><button class="btn btn--quiet" id="sheet-ok">Close</button></div>`);
+        $('#sheet-ok').addEventListener('click', closeSheet);
+      }
+    });
   }
 
   function toggleMark(stem) {
@@ -271,6 +297,7 @@
     const pic = $(`.frame[data-stem="${CSS.escape(stem)}"] picture`);
     if (!pic) return;
     const isMarked = marked.includes(stem);
+    const isVetoed = vetoed.includes(stem);
     lightbox.innerHTML = `${pic.outerHTML}
       <button class="lightbox__nav lightbox__nav--prev" aria-label="Previous"></button>
       <button class="lightbox__nav lightbox__nav--next" aria-label="Next"></button>
@@ -278,6 +305,9 @@
       <div class="lightbox__bar">
         <button class="act${isMarked ? ' is-marked' : ''}" data-lb="mark">
           <span class="ring"></span>${isMarked ? 'Marked' : 'Mark for polish'}
+        </button>
+        <button class="act act--veto${isVetoed ? ' is-vetoed' : ''}" data-lb="veto">
+          <span class="ring"></span>${isVetoed ? 'Won’t be posted' : 'Don’t post'}
         </button>
         <button class="act" data-lb="comment">✎ Note</button>
         <button class="act" data-lb="download">↓ Download</button>
@@ -292,6 +322,9 @@
     $('[data-lb="mark"]', lightbox).addEventListener('click', () => {
       toggleMarkFromLightbox(stem);
     });
+    $('[data-lb="veto"]', lightbox).addEventListener('click', () => {
+      toggleVetoFromLightbox(stem);
+    });
     $('[data-lb="comment"]', lightbox).addEventListener('click', () => {
       closeLightbox();
       openComments(stem);
@@ -299,6 +332,20 @@
     $('[data-lb="download"]', lightbox).addEventListener('click', () => {
       closeLightbox();
       openDownloads(stem);
+    });
+  }
+  function toggleVetoFromLightbox(stem) {
+    askName(async () => {
+      const on = !vetoed.includes(stem);
+      try {
+        const r = await api('veto', { stem, on });
+        vetoed = r.vetoed;
+        paintVetoes();
+        paintMarks();
+        renderLightbox(); // refresh the bar's veto state
+      } catch (err) {
+        closeLightbox();
+      }
     });
   }
   function toggleMarkFromLightbox(stem) {
@@ -350,6 +397,9 @@
     if (marksState === 'open' && marked.length === 0) {
       // guidance until the first mark lands — the single most-missed action
       el.textContent = `Tap “Mark for polish” under your favorite frames — choose up to ${state.cap}. Available until ${until}.`;
+    } else if (marksState === 'submitted' && vetoed.length === 0) {
+      // round 2 — social consent: guide until the first veto (or expiry urgency)
+      el.textContent = `Round 2 — tap “Don’t post” on any frame you’d rather keep off Instagram or RedNote. No limit, change your mind anytime — everything left untouched is OK to share.`;
     } else if (days <= 7) {
       el.textContent = `This gallery closes in ${days} day${days === 1 ? '' : 's'} — download what you want to keep.`;
     } else {
@@ -364,11 +414,13 @@
   $$('.frame').forEach((f) => {
     const stem = f.dataset.stem;
     $('.act--mark', f).addEventListener('click', () => toggleMark(stem));
+    $('.act--veto', f).addEventListener('click', () => toggleVeto(stem));
     $('.act--comment', f).addEventListener('click', () => openComments(stem));
     $('.act--dl', f).addEventListener('click', () => openDownloads(stem));
     $('picture', f).addEventListener('click', () => openLightbox(stem));
   });
 
   paintMarks();
+  paintVetoes();
   paintCommentCounts();
 })();

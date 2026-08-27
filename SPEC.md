@@ -449,6 +449,12 @@ order = display order, same as the portfolio).
 from ingest, exact Content-Length, guard at 3.8 GB. Singles and zips serve R2 bytes
 verbatim — the system never re-encodes a delivery file.
 
+**Vetoes ("round 2" — social-media consent).** Per-photo "Don't post" toggle, available
+alongside favorites picking and after marks submit (guided then by a round-2 banner).
+Unlimited, never locks, editable for the gallery's life, audit-logged (`veto-added` /
+`veto-removed` events with viewer name). Untouched frames are OK to post — the veto is
+the exception list, surfaced in admin (Marks panel → Social vetoes, copyable).
+
 **Lifecycle.** draft → live → (marks submitted → polishing via versions) → expiry.
 Deletion is LOGICAL: expiry (of live AND draft galleries) or a typed-confirm delete
 tombstones instantly and stamps `purge_after = +7 days`; the bytes are untouched until

@@ -217,6 +217,7 @@ async function load() {
 
   /* marks */
   const markedPhotos = photos.filter((p) => p.marked);
+  const vetoedPhotos = photos.filter((p) => p.vetoed);
   $('#marks-body').innerHTML = `
     ${g.marks_state === 'submitted'
       ? `<p>Submitted ${esc((g.marks_submitted_at || '').slice(0, 10))}${g.marks_note ? ` — note: <em>${esc(g.marks_note)}</em>` : ''}</p>`
@@ -225,7 +226,15 @@ async function load() {
     <div class="life-row">
       <button class="btn--quiet btn" id="copy-stems" ${markedPhotos.length ? '' : 'disabled'}>Copy filenames</button>
       ${g.marks_state === 'submitted' ? '<button class="btn--quiet btn" id="reopen">Reopen selections</button>' : ''}
-    </div>`;
+    </div>
+    <h3 class="subhead">Social vetoes</h3>
+    ${vetoedPhotos.length === 0
+      ? '<p class="muted">None — the client has not held any frame back from social.</p>'
+      : `<p><b>${vetoedPhotos.length}</b> frame(s) the client does <b>not</b> want posted — everything else is OK to share:</p>
+         <p>${vetoedPhotos.map((p) => esc(p.stem)).join(', ')}</p>
+         <div class="life-row"><button class="btn--quiet btn" id="copy-vetoes">Copy filenames</button></div>`}`;
+  $('#copy-vetoes')?.addEventListener('click', () =>
+    navigator.clipboard.writeText(vetoedPhotos.map((p) => p.stem).join('\n')));
   $('#copy-stems')?.addEventListener('click', () =>
     navigator.clipboard.writeText(markedPhotos.map((p) => p.stem).join('\n')));
   $('#reopen')?.addEventListener('click', async () => {
