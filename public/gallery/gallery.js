@@ -61,7 +61,11 @@
 
   function paintMarks() {
     banner();
-    $$('.frame').forEach((f) => f.classList.toggle('marked', marked.includes(f.dataset.stem)));
+    $$('.frame').forEach((f) => {
+      const on = marked.includes(f.dataset.stem);
+      f.classList.toggle('marked', on);
+      f.querySelector('[data-act="mark"]')?.setAttribute('aria-pressed', String(on));
+    });
     tray.hidden = false;
     trayCount.textContent =
       marksState === 'submitted'
@@ -107,16 +111,39 @@
         <div class="review-grid">${thumbs}</div>
         <p>Santiago will polish these frames; the finished versions land back
         in this gallery marked “updated”. Your selection locks once sent.</p>
-        <label>Anything he should know? (optional)<textarea id="finalize-note" maxlength="2000"></textarea></label>
+        <label>How should they feel? A sentence or two of direction.
+          <textarea id="finalize-note" maxlength="2000" placeholder="e.g. Warmer overall, brighten my face a little, keep my skin natural — and please don’t remove my freckles."></textarea></label>
+        <div class="starters" id="note-starters">
+          <button type="button">Warmer, golden tones</button>
+          <button type="button">Cooler, moodier tones</button>
+          <button type="button">Keep the colors natural</button>
+          <button type="button">Brighten my face a touch</button>
+          <button type="button">Natural skin — keep texture, clear temporary blemishes</button>
+          <button type="button">Smoother, more polished skin</button>
+          <button type="button">Tidy flyaway hairs and distractions</button>
+        </div>
+        <p class="starters__hint">Tap a phrase to start a line, then make it yours — “warmer,
+          brighter on my face, natural skin” is plenty. Say what should stay untouched
+          (freckles, a scar you love), and feel free to name a photo of yours to match.</p>
         <div class="sheet__row">
           <button class="btn btn--quiet" id="finalize-cancel">Not yet</button>
-          <button class="btn btn--primary" id="finalize-send">Send to Santiago</button>
+          <button class="btn btn--primary" id="finalize-send" disabled>Send to Santiago</button>
         </div>`);
+      const noteEl = $('#finalize-note');
+      const sendEl = $('#finalize-send');
+      noteEl.addEventListener('input', () => (sendEl.disabled = noteEl.value.trim().length < 4));
+      $('#note-starters').addEventListener('click', (ev) => {
+        const b = ev.target.closest('button');
+        if (!b) return;
+        noteEl.value = (noteEl.value.trim() ? noteEl.value.replace(/\s*$/, '\n') : '') + b.textContent + '. ';
+        noteEl.dispatchEvent(new Event('input'));
+        noteEl.focus();
+      });
       $('#finalize-cancel').addEventListener('click', closeSheet);
       $('#finalize-send').addEventListener('click', async (e) => {
         e.target.disabled = true;
         try {
-          await api('finalize', { note: $('#finalize-note').value });
+          await api('finalize', { note: noteEl.value.trim() });
           marksState = 'submitted';
           paintMarks();
           openSheet(`<h2>Sent.</h2><p>Santiago has your ${marked.length} mark${marked.length === 1 ? '' : 's'}.
@@ -144,7 +171,7 @@
       openSheet(`<h2>Notes on ${esc(stem)}</h2>
         <ul class="thread" id="thread"><li><p class="what">Loading…</p></li></ul>
         <label>Ask for an edit or leave a note — Santiago reads these.
-          <textarea id="comment-body" maxlength="4000"></textarea></label>
+          <textarea id="comment-body" maxlength="4000" placeholder="e.g. Brighten my face here · remove the person behind me · soften the line under my eyes"></textarea></label>
         <p class="comment-error" id="comment-error" hidden></p>
         <div class="sheet__row">
           <button class="btn btn--quiet" id="comment-close">Close</button>

@@ -198,3 +198,9 @@ button { font: inherit; color: inherit; background: none; border: none; padding:
 .tombstone a { color: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Guided finalize note — tappable starter phrases (the retouching brief) */
+.starters { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: -0.4rem 0 0.65rem; }
+.starters button { font-family: var(--grotesque); font-size: 0.75rem; color: var(--ink-soft); background: none; border: 1px solid var(--line); border-radius: 99px; padding: 0.3rem 0.7rem; cursor: pointer; }
+.starters button:hover, .starters button:focus-visible { border-color: var(--accent); color: var(--ink); }
+.sheet .starters__hint { font-size: 0.8125rem; color: var(--ink-faint); }

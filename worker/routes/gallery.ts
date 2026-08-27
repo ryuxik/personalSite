@@ -245,7 +245,11 @@ async function handleApi(request: Request, env: Env, ctx: GalleryContext, rest: 
   }
 
   if (action === 'finalize') {
-    const note = String(body.note ?? '').slice(0, 2000);
+    const note = String(body.note ?? '').trim().slice(0, 2000);
+    // The note is the retouching brief — without it Santiago is guessing at
+    // direction. The sheet collects it with guided starters; enforce here too.
+    if (!note)
+      return json({ error: 'note-required', message: 'Add a line about the direction you want — even one sentence helps.' }, 400);
     // Atomic: refuses double-finalize races, and an empty mark set (review finding).
     const r = await env.DB.prepare(
       `UPDATE galleries SET marks_state = 'submitted', marks_note = ?, marks_submitted_at = ?
@@ -412,7 +416,7 @@ async function galleryPage(env: Env, ctx: GalleryContext): Promise<Response> {
   </picture>
   ${updated}
   <div class="frame__actions">
-    <button class="act act--mark" data-act="mark">
+    <button class="act act--mark" data-act="mark" aria-label="Mark for polish" aria-pressed="false">
       <span class="ring"></span><span class="when-off">Mark for polish</span><span class="when-on">Marked</span>
     </button>
     <button class="act act--comment" data-act="comment">✎ Note<span class="act__count"></span></button>
