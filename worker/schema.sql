@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS galleries (
   marks_state   TEXT NOT NULL DEFAULT 'open',   -- open | submitted
   marks_note    TEXT NOT NULL DEFAULT '',
   marks_submitted_at TEXT,
+  veto_notified_at TEXT,                     -- last do-not-post email (rate limit + cron sweep cursor)
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
   deleted_at    TEXT,
   purge_after   TEXT,                           -- end of the 7-day trash grace

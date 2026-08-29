@@ -260,7 +260,29 @@ async function handleApi(request: Request, env: Env, ctx: GalleryContext, rest: 
     )
       .bind(gallery.id)
       .all<{ stem: string }>();
-    return json({ vetoed: rows.results.map((x) => x.stem) });
+    const vetoList = rows.results.map((x) => x.stem);
+    // Email Santiago on changes, one per gallery-hour: each email carries the
+    // CURRENT list so a superseded one self-corrects, and anything that lands
+    // inside the quiet hour is swept by the nightly cron (veto events newer
+    // than veto_notified_at).
+    const lastMail = gallery.veto_notified_at ? Date.parse(gallery.veto_notified_at) : 0;
+    if (Date.now() - lastMail > 3600_000) {
+      const sent = await emailPhotographer(
+        env,
+        `Selects — ${gallery.title}: do-not-post list changed`,
+        `<p><strong>${esc(viewer)}</strong> ${on ? 'held back' : 'released'} ${esc(photo.stem)} on
+         <strong>${esc(gallery.title)}</strong>.</p>
+         <p>The do-not-post list is now ${vetoList.length === 0
+           ? 'EMPTY — every frame may be shared'
+           : `<strong>${vetoList.length}</strong> frame(s): ${esc(vetoList.join(', '))}`}.</p>
+         <p>Glance at this list at the moment you post.
+         <a href="${env.PUBLIC_ORIGIN ?? ''}/admin/g/${gallery.id}">Open in admin</a></p>`
+      );
+      if (sent)
+        await env.DB.prepare('UPDATE galleries SET veto_notified_at = ? WHERE id = ?')
+          .bind(new Date().toISOString(), gallery.id).run();
+    }
+    return json({ vetoed: vetoList });
   }
 
   if (action === 'finalize') {

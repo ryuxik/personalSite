@@ -228,6 +228,41 @@ export async function runCron(env: Env): Promise<void> {
         for (const c of shown) await db.prepare('UPDATE comments SET notified = 1 WHERE id = ?').bind(c.id).run();
       }
     }],
+
+    // ---- veto sweep: changes that landed inside the instant email's quiet
+    // hour never re-notified — email the current list for any gallery whose
+    // latest veto event postdates its last veto email. (Event timestamps are
+    // SQLite "YYYY-MM-DD HH:MM:SS"; veto_notified_at is ISO — normalise.)
+    ['veto-sweep', async () => {
+      const dirty = await db
+        .prepare(
+          `SELECT g.id, g.title FROM galleries g
+            WHERE g.status != 'deleted' AND EXISTS (
+              SELECT 1 FROM events e WHERE e.gallery_id = g.id
+                AND e.type IN ('veto-added','veto-removed')
+                AND e.created_at > COALESCE(replace(substr(g.veto_notified_at, 1, 19), 'T', ' '), ''))`
+        )
+        .all<{ id: number; title: string }>();
+      for (const g of dirty.results) {
+        const rows = await db
+          .prepare('SELECT stem FROM photos WHERE gallery_id = ? AND vetoed = 1 AND removed = 0 ORDER BY stem')
+          .bind(g.id)
+          .all<{ stem: string }>();
+        const list = rows.results.map((x) => x.stem);
+        const sent = await emailPhotographer(
+          env,
+          `Selects — ${g.title}: do-not-post list changed`,
+          `<p>The do-not-post list on <strong>${esc(g.title)}</strong> changed since the last update.
+           It is now ${list.length === 0
+             ? 'EMPTY — every frame may be shared'
+             : `<strong>${list.length}</strong> frame(s): ${esc(list.join(', '))}`}.</p>
+           <p><a href="${env.PUBLIC_ORIGIN ?? ''}/admin/g/${g.id}">Open in admin</a></p>`
+        );
+        if (sent)
+          await db.prepare('UPDATE galleries SET veto_notified_at = ? WHERE id = ?')
+            .bind(new Date().toISOString(), g.id).run();
+      }
+    }],
   ];
 
   for (const [name, run] of stages) {
