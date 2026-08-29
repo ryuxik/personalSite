@@ -425,7 +425,10 @@ async function galleryPage(env: Env, ctx: GalleryContext): Promise<Response> {
           .filter(Boolean)
           .join('; ')
       );
-      const updated = p.version > 1 ? `<span class="frame__updated">updated</span>` : '';
+      // "updated" is a promise kept, not a changelog: it marks the polish
+      // loop closing on a frame the CLIENT asked about. Technical re-uploads
+      // of unmarked frames (color fixes, re-processing) stay silent.
+      const updated = p.version > 1 && p.marked === 1 ? `<span class="frame__updated">updated</span>` : '';
       return `<figure class="frame" data-stem="${esc(p.stem)}" style="${style}">
   <picture class="frame__picture">
     <source media="(dynamic-range: high)" type="image/jpeg" srcset="${jpgSrcset}" sizes="${SIZES}">

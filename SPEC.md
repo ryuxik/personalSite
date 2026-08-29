@@ -441,8 +441,9 @@ cap enforced atomically in SQL (concurrent viewers cannot exceed N), explicit fi
 (locks + emails Santiago; refuses an empty set), photographer reopen. Re-ingesting a
 stem with --replace bumps its version ONLY when the original's content changed (bytes +
 CRC32 against the server record); an unchanged re-run is a no-op and a partial earlier
-run is healed gap-by-gap without a bump. Marks and threads survive; the client sees an
-"updated" chip — the polish loop IS delivery. Display order is stem sort (filename
+run is healed gap-by-gap without a bump. Marks and threads survive; a MARKED photo
+gets an "updated" chip (unmarked re-uploads are silent maintenance) — the
+polish loop IS delivery. Display order is stem sort (filename
 order = display order, same as the portfolio).
 
 **Zips stream, nothing is "prepared".** STORE-mode (HEIC doesn't compress), CRC32s
