@@ -72,11 +72,30 @@ function buildMime(from: string, to: string, zone: string, subject: string, html
     for (const b of bytes) binary += String.fromCharCode(b);
     return btoa(binary);
   };
-  const body = utf8ToB64(html).replace(/(.{76})/g, '$1\r\n');
+  // RFC 2047: each encoded-word tops out at 75 chars INCLUDING the
+  // =?utf-8?B?…?= overhead (12 chars) — so at most 45 UTF-8 bytes of subject
+  // per word, split on code-point boundaries and folded with CRLF+space.
+  // One over-long word is exactly how "do-not-post list changed" subjects
+  // arrived garbled.
+  const encodeSubject = (text: string): string => {
+    const words: string[] = [];
+    let chunk = '';
+    let bytes = 0;
+    for (const ch of text) {
+      const b = new TextEncoder().encode(ch).length;
+      if (bytes + b > 45) { words.push(chunk); chunk = ''; bytes = 0; }
+      chunk += ch;
+      bytes += b;
+    }
+    if (chunk) words.push(chunk);
+    return words.map((w) => `=?utf-8?B?${utf8ToB64(w)}?=`).join('\r\n ');
+  };
+  const shell = `<div style="font-family:-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.55;max-width:34em">${html}</div>`;
+  const body = utf8ToB64(shell).replace(/(.{76})/g, '$1\r\n');
   return [
     `From: Selects <${from}>`,
     `To: ${to}`,
-    `Subject: =?utf-8?B?${utf8ToB64(subject)}?=`,
+    `Subject: ${encodeSubject(subject)}`,
     `Date: ${new Date().toUTCString()}`,
     `Message-ID: <${crypto.randomUUID()}@${zone}>`,
     'MIME-Version: 1.0',
