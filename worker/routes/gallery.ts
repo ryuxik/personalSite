@@ -459,6 +459,9 @@ async function galleryPage(env: Env, ctx: GalleryContext): Promise<Response> {
          alt="${esc(gallery.title)} — frame ${esc(p.stem)}"
          loading="${i < 2 ? 'eager' : 'lazy'}" decoding="async">
   </picture>
+  <button class="frame__quick" data-act="mark" aria-label="Mark for polish" aria-pressed="false">
+    <span class="ring"></span>
+  </button>
   ${updated}
   <div class="frame__actions">
     <button class="act act--mark" data-act="mark" aria-label="Mark for polish" aria-pressed="false">
@@ -501,13 +504,13 @@ ${figures}
   <button class="tray__finalize" id="tray-finalize">Finalize →</button>
 </div>
 
-<div class="sheet" id="sheet" hidden>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden>
   <div class="sheet__panel" role="dialog" aria-modal="true">
     <div class="sheet__body" id="sheet-body"></div>
   </div>
 </div>
 
-<div class="lightbox" id="lightbox" hidden></div>
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden></div>
 
 <script id="gallery-state" type="application/json">${JSON.stringify(state).replaceAll('<', '\\u003c')}</script>
 <script src="/gallery/gallery.js" defer></script>`;

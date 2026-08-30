@@ -229,3 +229,22 @@ button { font: inherit; color: inherit; background: none; border: none; padding:
 /* four actions per frame now — let them wrap on narrow screens */
 .frame__actions { flex-wrap: wrap; row-gap: 0; }
 .lightbox__bar { flex-wrap: wrap; row-gap: 0; column-gap: 1.1rem; }
+
+/* Quick-mark overlay — the primary action lives ON the photo, visible the
+ * moment a frame is on screen (the row was below the fold on desktop). */
+.frame__quick {
+  position: absolute; top: 0.7rem; right: 0.7rem; width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10, 10, 14, 0.45); border: none; border-radius: 50%;
+  cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  transition: background-color 120ms;
+}
+.frame__quick:hover { background: rgba(10, 10, 14, 0.65); }
+.frame__quick .ring { width: 21px; height: 21px; border-color: rgba(255, 255, 255, 0.85); }
+.frame.marked .frame__quick .ring { background: var(--accent); border-color: var(--accent); }
+
+/* thumb-sized tray actions (were 20px tall on phones) */
+.tray__dl, .tray__finalize { min-height: 44px; display: inline-flex; align-items: center; }
+
+/* keyboard focus is a first-class state */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

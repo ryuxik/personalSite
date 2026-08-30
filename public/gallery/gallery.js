@@ -29,8 +29,8 @@
   /* --------------------------------------------------------------- sheet */
   const sheet = $('#sheet');
   const sheetBody = $('#sheet-body');
-  function openSheet(html) { sheetBody.innerHTML = html; sheet.hidden = false; }
-  function closeSheet() { sheet.hidden = true; sheetBody.innerHTML = ''; }
+  function openSheet(html) { sheetBody.innerHTML = html; sheet.hidden = false; document.body.style.overflow = 'hidden'; }
+  function closeSheet() { sheet.hidden = true; sheetBody.innerHTML = ''; document.body.style.overflow = ''; }
   sheet.addEventListener('click', (e) => { if (e.target === sheet) closeSheet(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeSheet(); closeLightbox(); } });
 
@@ -65,7 +65,7 @@
     $$('.frame').forEach((f) => {
       const on = marked.includes(f.dataset.stem);
       f.classList.toggle('marked', on);
-      f.querySelector('[data-act="mark"]')?.setAttribute('aria-pressed', String(on));
+      f.querySelectorAll('[data-act="mark"]').forEach((b) => b.setAttribute('aria-pressed', String(on)));
     });
     tray.hidden = false;
     const vetoNote = vetoed.length ? ` · ${vetoed.length} off social` : '';
@@ -220,6 +220,13 @@
         const r = await fetch(`${state.base}/api/comments?photo=${encodeURIComponent(stem)}`);
         render((await r.json()).comments || []);
       } catch (e) { render([]); }
+      {
+        const box = $('#comment-body');
+        const send = $('#comment-send');
+        send.disabled = true;
+        box.addEventListener('input', () => (send.disabled = !box.value.trim()));
+        box.focus();
+      }
       $('#comment-send').addEventListener('click', async () => {
         const box = $('#comment-body');
         const body = box.value.trim();
@@ -414,6 +421,7 @@
   $$('.frame').forEach((f) => {
     const stem = f.dataset.stem;
     $('.act--mark', f).addEventListener('click', () => toggleMark(stem));
+    $('.frame__quick', f)?.addEventListener('click', () => toggleMark(stem));
     $('.act--veto', f).addEventListener('click', () => toggleVeto(stem));
     $('.act--comment', f).addEventListener('click', () => openComments(stem));
     $('.act--dl', f).addEventListener('click', () => openDownloads(stem));
