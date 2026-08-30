@@ -560,8 +560,7 @@ async function adminGallery(env: Env, id: number): Promise<Response> {
   </header>
   <section class="panel" id="share"><h2>Share</h2><div id="share-body"></div></section>
   <section class="panel" id="ingest"><h2>Add photos</h2><div id="ingest-body"></div></section>
-  <section class="panel" id="matrix"><h2>Coverage</h2><div id="matrix-body">Loading…</div></section>
-  <section class="panel" id="marks"><h2>Marks</h2><div id="marks-body"></div></section>
+  <section class="panel" id="matrix"><h2>Photos</h2><div id="matrix-body">Loading…</div></section>
   <section class="panel" id="threads"><h2>Feedback</h2><div id="threads-body"></div></section>
   <section class="panel" id="lifecycle"><h2>Lifecycle</h2><div id="lifecycle-body"></div></section>
 </main>

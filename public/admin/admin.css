@@ -101,3 +101,8 @@ table.matrix { border-collapse: collapse; width: 100%; font-variant-numeric: tab
 .rename-form__row { display: flex; gap: 0.5rem; align-items: center; margin: 0; }
 
 .subhead { font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); margin: 1.4rem 0 0.4rem; }
+
+/* merged photos table: selection state as columns */
+.matrix .cell-mark { color: var(--accent); text-align: center; }
+.matrix .cell-veto { color: var(--warn); text-align: center; }
+.sel-line { margin: 0 0 0.4rem; }

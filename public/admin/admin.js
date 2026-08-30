@@ -9,6 +9,7 @@ import { rgbaToThumbHash, thumbHashToDataURL } from '/admin/vendor/thumbhash.js'
 const $ = (s, el) => (el || document).querySelector(s);
 const view = $('.admin').dataset.view;
 const esc = (s) => { const d = document.createElement('span'); d.textContent = s ?? ''; return d.innerHTML; };
+const escAttr = (s) => esc(s).replace(/"/g, '&quot;');
 const fmtBytes = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.round(n / 1024) + ' KB');
 const api = (path, opts = {}) =>
   fetch(`/api/admin/${path}`, {
@@ -195,8 +196,19 @@ async function load() {
   /* coverage matrix — thumbnails come through the AUTHED media route, so
      they work on drafts (the capability URL now hides draft media) */
   const mediaBase = (p, kind) => `/api/admin/galleries/${g.id}/media/${p.id}/${kind}`;
-  $('#matrix-body').innerHTML = `<div class="table-scroll"><table class="matrix">
-    <thead><tr><th></th><th>Photo</th>${SHOWN.map((k) => `<th>${k}</th>`).join('')}<th>Ladder</th><th>State</th></tr></thead>
+  const markedPhotos = photos.filter((p) => p.marked);
+  const vetoedPhotos = photos.filter((p) => p.vetoed);
+  $('#matrix-body').innerHTML = `
+    <p class="sel-line">${g.marks_state === 'submitted'
+      ? `Selection submitted ${esc((g.marks_submitted_at || '').slice(0, 10))}${g.marks_note ? ` — <em>${esc(g.marks_note)}</em>` : ''}`
+      : `<span class="muted">Selection in progress — ${markedPhotos.length}/${g.n_marks} marked, not finalized yet.</span>`}</p>
+    <div class="life-row">
+      <button class="btn--quiet btn" id="copy-stems" ${markedPhotos.length ? '' : 'disabled'}>Copy marked</button>
+      <button class="btn--quiet btn" id="copy-vetoes" ${vetoedPhotos.length ? '' : 'disabled'}>Copy do-not-post</button>
+      ${g.marks_state === 'submitted' ? '<button class="btn--quiet btn" id="reopen">Reopen selections</button>' : ''}
+    </div>
+    <div class="table-scroll"><table class="matrix">
+    <thead><tr><th></th><th>Photo</th>${SHOWN.map((k) => `<th>${k}</th>`).join('')}<th>Ladder</th><th>Marked</th><th>No post</th><th>State</th></tr></thead>
     <tbody>${photos.map((p) => {
       const cell = (k) => p.assets[k]
         ? `<td class="ok">✓ ${fmtBytes(p.assets[k].bytes)}</td>`
@@ -206,37 +218,21 @@ async function load() {
       const missing = SHOWN.filter((k) => !p.assets[k]);
       return `<tr>
         <td>${rungKeys.length ? `<img class="thumb" src="${mediaBase(p, rungKeys.sort()[0])}" alt="">` : '<span class="thumb"></span>'}</td>
-        <td>${p.marked ? '<span class="mark">●</span> ' : ''}${esc(p.stem)}${p.version > 1 ? ` <span class="muted">v${p.version}</span>` : ''}</td>
+        <td>${esc(p.stem)}${p.version > 1 ? ` <span class="muted">v${p.version}</span>` : ''}</td>
         ${SHOWN.map(cell).join('')}
         <td class="${rungs > 0 ? 'ok' : 'miss'}">${rungs} rung${rungs === 1 ? '' : 's'}</td>
+        <td class="${p.marked ? 'cell-mark' : 'miss'}"${p.marked ? ` title="marked by ${escAttr(p.marked_by)} · ${escAttr((p.marked_at || '').slice(0, 10))}"` : ''}>${p.marked ? '★' : '—'}</td>
+        <td class="${p.vetoed ? 'cell-veto' : 'miss'}"${p.vetoed ? ` title="held back by ${escAttr(p.vetoed_by)} · ${escAttr((p.vetoed_at || '').slice(0, 10))}"` : ''}>${p.vetoed ? '✕' : '—'}</td>
         <td class="${missing.filter((k) => k !== 'instagram').length ? 'miss' : 'ok'}">${missing.length ? 'missing ' + missing.join(', ') : 'ready'}</td>
       </tr>`;
     }).join('')}</tbody></table></div>
     <p class="muted">Add or update photos above, or with the ingest CLI — a changed original bumps its
-    version and shows the client an “updated” chip; marks and threads survive.</p>`;
-
-  /* marks */
-  const markedPhotos = photos.filter((p) => p.marked);
-  const vetoedPhotos = photos.filter((p) => p.vetoed);
-  $('#marks-body').innerHTML = `
-    ${g.marks_state === 'submitted'
-      ? `<p>Submitted ${esc((g.marks_submitted_at || '').slice(0, 10))}${g.marks_note ? ` — note: <em>${esc(g.marks_note)}</em>` : ''}</p>`
-      : '<p class="muted">In progress — the client has not finalized yet.</p>'}
-    <p>${markedPhotos.length === 0 ? '<span class="muted">Nothing marked yet.</span>' : markedPhotos.map((p) => esc(p.stem)).join(', ')}</p>
-    <div class="life-row">
-      <button class="btn--quiet btn" id="copy-stems" ${markedPhotos.length ? '' : 'disabled'}>Copy filenames</button>
-      ${g.marks_state === 'submitted' ? '<button class="btn--quiet btn" id="reopen">Reopen selections</button>' : ''}
-    </div>
-    <h3 class="subhead">Social vetoes</h3>
-    ${vetoedPhotos.length === 0
-      ? '<p class="muted">None — the client has not held any frame back from social.</p>'
-      : `<p><b>${vetoedPhotos.length}</b> frame(s) the client does <b>not</b> want posted — everything else is OK to share:</p>
-         <p>${vetoedPhotos.map((p) => esc(p.stem)).join(', ')}</p>
-         <div class="life-row"><button class="btn--quiet btn" id="copy-vetoes">Copy filenames</button></div>`}`;
-  $('#copy-vetoes')?.addEventListener('click', () =>
-    navigator.clipboard.writeText(vetoedPhotos.map((p) => p.stem).join('\n')));
+    version and shows the client an “updated” chip; marks and threads survive.
+    ★ = marked for polish · ✕ = do not post on social.</p>`;
   $('#copy-stems')?.addEventListener('click', () =>
     navigator.clipboard.writeText(markedPhotos.map((p) => p.stem).join('\n')));
+  $('#copy-vetoes')?.addEventListener('click', () =>
+    navigator.clipboard.writeText(vetoedPhotos.map((p) => p.stem).join('\n')));
   $('#reopen')?.addEventListener('click', async () => {
     await api(`galleries/${id}`, { method: 'PATCH', body: { reopen: true } });
     load();
