@@ -1,6 +1,6 @@
 ---
 title: "Dynamic"
-subject: "Zicheng"
+subject: "Dynamic"
 context: personal
 date: 2026-08-29
 genre: portraiture

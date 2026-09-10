@@ -1,6 +1,6 @@
 ---
 title: "Contrast"
-subject: "Nina"
+subject: "Contrast"
 context: personal
 date: 2026-09-06
 genre: portraiture

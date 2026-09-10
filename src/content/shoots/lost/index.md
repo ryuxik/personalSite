@@ -1,6 +1,6 @@
 ---
 title: "Lost"
-subject: "Anya"
+subject: "Lost"
 context: personal
 date: 2026-08-26
 genre: portraiture
