@@ -6,5 +6,6 @@ date: 2024-04-16
 location: "Hawaiʻi"
 genre: portraiture
 cover: ./001.jpg
-featured: 88
+featured: 94
+section: diary
 ---
