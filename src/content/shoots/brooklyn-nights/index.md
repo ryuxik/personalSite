@@ -7,4 +7,5 @@ location: "Brooklyn, NY"
 genre: portraiture
 cover: ./001.jpg
 featured: 50
+section: diary
 ---

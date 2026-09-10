@@ -7,4 +7,5 @@ location: "Beijing, CN"
 genre: portraiture
 cover: ./001.jpg
 featured: 80
+section: diary
 ---

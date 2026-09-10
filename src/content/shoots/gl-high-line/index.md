@@ -6,5 +6,5 @@ date: 2023-11-11
 location: "New York, NY"
 genre: portraiture
 cover: ./001.jpg
-featured: 96
+featured: 80
 ---

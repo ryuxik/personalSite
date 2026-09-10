@@ -7,4 +7,5 @@ location: "Japan"
 genre: portraiture
 cover: ./001.jpg
 featured: 75
+section: diary
 ---
