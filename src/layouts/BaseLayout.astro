@@ -13,6 +13,15 @@
  */
 import '@fontsource-variable/bricolage-grotesque/standard.css'; // opsz+wdth+wght
 import '@fontsource-variable/geist-mono/wght.css';
+/**
+ * The two latin-subset variable faces every page paints text with, imported
+ * for their *built* URLs so they can be preloaded. `?url` runs them through the
+ * same Vite asset pipeline the @font-face rules above use, so the href is the
+ * real fingerprinted /_astro/ path and stays correct across builds.
+ * Only latin + the upright axis: what the first screen needs.
+ */
+import bricolageLatinUrl from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-standard-normal.woff2?url';
+import geistMonoLatinUrl from '@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2?url';
 import '../styles/global.css';
 import { SITE } from '../config';
 
@@ -24,7 +33,7 @@ interface Props {
 
 const { title, description, bodyClass } = Astro.props;
 
-const pageTitle = title ? `${title} — ${SITE.name}` : SITE.title;
+const pageTitle = title ? `${title} · ${SITE.business}` : SITE.title;
 const pageDescription = description ?? SITE.description;
 
 // Trailing slash tolerant, so "/sessions" and "/sessions/" both mark active.
@@ -37,6 +46,7 @@ const canonical = new URL(Astro.url.pathname, SITE.url).href;
 const NAV = [
   { href: '/', label: 'Overview' },
   { href: '/sessions', label: 'Sessions' },
+  { href: '/diary', label: 'Diary' },
   { href: '/information', label: 'Information' },
 ] as const;
 
@@ -52,8 +62,20 @@ const hasHeadExtras = Astro.slots.has('head');
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#101014" />
+
+    {/* Icons. SVG first for anything modern; the PNG is the fallback, and
+        apple-touch-icon is what iOS uses when the site is added to the home screen. */}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icon-512.png" type="image/png" sizes="512x512" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
+
+    {/* Fonts the first paint needs. Both are self-hosted, so `crossorigin` is
+        still required: a preload without it fetches in a different CORS mode
+        than the @font-face request and the file is downloaded twice. */}
+    <link rel="preload" as="font" type="font/woff2" href={bricolageLatinUrl} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={geistMonoLatinUrl} crossorigin />
 
     {
       /* Fallback metadata — superseded by <Seo /> once Agent D fills the "head" slot. */
@@ -73,7 +95,7 @@ const hasHeadExtras = Astro.slots.has('head');
     <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="site-header">
-      <a class="wordmark" href="/" aria-label={`${SITE.name} — home`}>{SITE.name}</a>
+      <a class="wordmark" href="/" aria-label={`${SITE.business}, home`}>{SITE.business}</a>
 
       <nav class="nav nav--desktop" aria-label="Primary">
         <ul class="nav__list">
@@ -123,10 +145,29 @@ const hasHeadExtras = Astro.slots.has('head');
 
     <footer class="site-footer">
       <p>
-        <span>© 2026 {SITE.name.charAt(0) + SITE.name.slice(1).toLowerCase()}</span>
+        <span>© 2026 {SITE.business}</span>
+        <span class="site-footer__sep" aria-hidden="true">·</span>
+        <a href="/sessions/">Sessions</a>
+        <span class="site-footer__sep" aria-hidden="true">·</span>
+        <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
         <span class="site-footer__sep" aria-hidden="true">·</span>
         <a href={SITE.instagram} rel="me noopener noreferrer" target="_blank">Instagram</a>
       </p>
     </footer>
+
+    {
+      /* Cloudflare Web Analytics. Cookieless, no personal data, ~1 request.
+         Emitted only when SITE.analyticsToken is set, so the default build ships
+         zero third-party script tags. The CSP in public/_headers already allows
+         static.cloudflareinsights.com so pasting a token needs no other change. */
+      SITE.analyticsToken && (
+        <script
+          is:inline
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon={`{"token": "${SITE.analyticsToken}"}`}
+        />
+      )
+    }
   </body>
 </html>

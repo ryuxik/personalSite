@@ -1,22 +1,31 @@
 ---
 /**
- * SessionsJsonLd — schema.org ProfessionalService + one Service per session tier.
+ * SessionsJsonLd — schema.org LocalBusiness + one Service per session tier.
+ * LocalBusiness, not ProfessionalService: that type was deprecated by schema.org and
+ * was never in Google's supported set. No FAQPage: Google removed FAQ rich results
+ * in May 2026 and controlled studies show schema does not drive AI citation.
  * Owned by Agent D; belongs on /sessions only.
  *
  *   <SessionsJsonLd slot="head" />
  *
- * Emitted as a single @graph so the business node and the three service nodes
- * cross-reference by @id, and both link back to PersonJsonLd's `#person`.
+ * Emitted as a single @graph so the business node, the three service nodes and
+ * the FAQ page cross-reference by @id, and all of them link back to
+ * PersonJsonLd's `#person`.
  *
- * Locality: SITE.city is empty until Ryu confirms it. While it is empty this
- * component omits `address` and `areaServed` entirely rather than shipping a
- * blank PostalAddress — an empty address is worse than no address for local SEO.
+ * Locality: driven by SITE.city. While it is empty this component omits
+ * `address` and `areaServed` entirely rather than shipping a blank
+ * PostalAddress — an empty address is worse than no address for local SEO.
  *
- * Prices: deliberately absent. Every tier is "starting at $TODO" on the page, and
- * a schema `offers.price` that disagrees with the page is a rich-results penalty.
- * TODO(ryu): once tier prices are real, add
- *   offers: { '@type': 'Offer', price: '350', priceCurrency: 'USD', … }
- * to each service below and set `priceRange` (e.g. "$$") on the business node.
+ * Prices mirror the tier cards in src/pages/sessions.astro exactly. They are the
+ * "starting at" floor, so each Offer also carries a `priceSpecification` with
+ * `minPrice`: a bare `price` that disagrees with the page is a rich-results
+ * penalty, and the page says "Starting at $395", not "$395".
+ *
+ * FAQ answers are the first paragraph of each <Faq> on the page, as plain text.
+ * Google requires the answer to appear on the page; keeping this file in step
+ * with sessions.astro is manual, so edit both or neither.
+ *
+ * No em dashes anywhere in the strings below — this is rendered output.
  */
 import { SITE } from '../config';
 
@@ -25,40 +34,47 @@ interface ServiceTier {
   id: string;
   name: string;
   description: string;
+  /** Starting price in whole USD, matching the tier card. */
+  price: number;
 }
 
 interface Props {
   services?: ServiceTier[];
 }
 
-// Names must match the tier cards Agent C renders on /sessions (SPEC.md § Sessions page).
+// Names, prices and scope must match the tier cards Agent C renders on /sessions.
 const DEFAULT_SERVICES: ServiceTier[] = [
   {
     id: 'headshot-session',
     name: 'Headshot Session',
     description:
-      'A focused sitting for professional headshots — one look, retouched selects delivered as web and print files.',
+      'A one-hour headshot sitting, up to two looks, studio or on location, with retouched finals delivered as high-res files and web crops.',
+    price: 395,
   },
   {
     id: 'portrait-session',
     name: 'Portrait Session',
     description:
-      'A longer portrait sitting with multiple looks and locations, edited as a small set of finished frames.',
+      'A two-hour portrait sitting with up to three looks across one studio setup and one exterior location, planned in advance and edited as a set of finished frames.',
+    price: 650,
   },
   {
     id: 'half-day-creative',
     name: 'Half-Day Creative',
     description:
-      'A half-day creative block for editorial, campaign, and personal-project work, scoped after a consult.',
+      'A four-hour produced shoot for editorial, campaign and personal-project work, with full pre-production and up to five looks across two or three setups.',
+    price: 1450,
   },
 ];
 
+// One entry per <Faq> in src/pages/sessions.astro, in page order.
 const { services = DEFAULT_SERVICES } = Astro.props;
 
 const titleCased = SITE.name.charAt(0) + SITE.name.slice(1).toLowerCase();
 
 const BUSINESS_ID = `${SITE.url}/sessions/#business`;
 const PERSON_ID = `${SITE.url}/#person`;
+const SESSIONS_URL = `${SITE.url}/sessions/`;
 
 const city = SITE.city.trim();
 
@@ -80,15 +96,34 @@ const serviceNodes = services.map((tier) => ({
   ...(city ? { areaServed: { '@type': 'City', name: city } } : {}),
 }));
 
+/** The tier prices are floors, so both `price` and a minPrice specification. */
+const offerFor = (tier: ServiceTier) => ({
+  '@type': 'Offer',
+  '@id': `${SITE.url}/sessions/#offer-${tier.id}`,
+  name: tier.name,
+  url: `${SITE.url}/sessions/#investment`,
+  price: String(tier.price),
+  priceCurrency: 'USD',
+  priceSpecification: {
+    '@type': 'PriceSpecification',
+    minPrice: String(tier.price),
+    priceCurrency: 'USD',
+    valueAddedTaxIncluded: false,
+  },
+  availability: 'https://schema.org/InStock',
+  itemOffered: { '@id': `${SITE.url}/sessions/#${tier.id}` },
+});
+
 const business = {
-  '@type': 'ProfessionalService',
+  '@type': 'LocalBusiness',
   '@id': BUSINESS_ID,
   name: `${titleCased} Photography`,
-  url: `${SITE.url}/sessions/`,
+  url: SESSIONS_URL,
   description:
-    'Photography sessions — headshots, portraits, and half-day creative work, booked directly.',
+    'Photography sessions: headshots, portraits, and half-day creative work, booked directly.',
   image: new URL('/og/sessions.jpg', SITE.url).href,
   email: `mailto:${SITE.email}`,
+  priceRange: '$$',
   founder: { '@id': PERSON_ID },
   provider: { '@id': PERSON_ID },
   ...(SITE.instagram ? { sameAs: [SITE.instagram] } : {}),
@@ -96,10 +131,7 @@ const business = {
   hasOfferCatalog: {
     '@type': 'OfferCatalog',
     name: 'Photography sessions',
-    itemListElement: services.map((tier) => ({
-      '@type': 'Offer',
-      itemOffered: { '@id': `${SITE.url}/sessions/#${tier.id}` },
-    })),
+    itemListElement: services.map(offerFor),
   },
 };
 

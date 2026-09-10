@@ -18,7 +18,7 @@
 import { SITE } from '../config';
 
 interface Props {
-  /** Page name. Rendered as "{title} — {SITE.name}". Omit on the home page for the bare SITE.title. */
+  /** Page name. Rendered as "{title} · {SITE.name}". Omit on the home page for the bare SITE.title. */
   title?: string;
   /** Meta description. Falls back to SITE.description. */
   description?: string;
@@ -34,7 +34,7 @@ interface Props {
 
 const { title, description, ogImage, type = 'website', imageAlt, noindex = false } = Astro.props;
 
-const pageTitle = title ? `${title} — ${SITE.name}` : SITE.title;
+const pageTitle = title ? `${title} · ${SITE.business}` : SITE.title;
 const pageDescription = description ?? SITE.description;
 
 // Astro's own path shape, unmodified — matches what @astrojs/sitemap emits.
@@ -51,7 +51,7 @@ const OG_BY_PATH: Record<string, string> = {
 const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
 const ogPath = ogImage ?? OG_BY_PATH[path] ?? '/og/home.jpg';
 const ogUrl = new URL(ogPath, SITE.url).href;
-const ogAlt = imageAlt ?? `${SITE.name} — photography`;
+const ogAlt = imageAlt ?? `${SITE.name} · photography`;
 ---
 
 <title>{pageTitle}</title>
