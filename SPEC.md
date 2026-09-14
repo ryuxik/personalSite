@@ -473,7 +473,7 @@ browser sessions bootstrap by POSTing the token to `/admin/session` (never a que
 string — that would persist the secret in history and edge logs); the cookie stores an
 HMAC-derived value, all compares are timing-safe. Coverage matrix (thumbnails via an
 authed admin media route, so drafts render), share panel with rotate, marks view with
-Copy filenames + reopen, feedback threads with reply/resolve, extend / archive-zip /
+Copy filenames + reopen, a photo-centric Notes pane (strip of noted photos → open photo + its thread + inline reply; per-note and per-photo "addressed", proactive notes on any photo, keyboard: ↑↓/J K, R, ⌘↩, A; the Photos table's Notes column jumps into it), extend / archive-zip /
 typed-confirm delete / restore-within-grace. Uploads are verified against their
 declared size after the R2 put. The ingest gates fail closed: no preview gain map,
 unreadable metadata, GPS tags, or a non-upright HDR preview all refuse with an

@@ -58,6 +58,7 @@ if (view === 'home') {
           <a href="/admin/g/${g.id}">${esc(g.title)}</a>
           <span class="chip ${g.status}">${g.status}</span>
           ${g.marks_state === 'submitted' ? '<span class="chip submitted">marks in</span>' : ''}
+          ${g.open_notes > 0 ? `<span class="chip notes">${g.open_notes} to answer</span>` : ''}
           <span class="meta">${g.photo_count} photo(s) · ${g.marked_count}/${g.n_marks} marked · until ${g.expiry_at.slice(0, 10)}</span>
         </div>`).join('');
   };
@@ -84,6 +85,38 @@ if (view === 'home') {
 /* ---------------------------------------------------------- gallery */
 const id = $('.admin').dataset.id;
 const SHOWN = ['original', 'instagram', 'rednote', 'preview'];
+
+/* ladder rungs, numerically (a string sort puts l1400 before l900) */
+const rungWidths = (p) => Object.keys(p.assets ?? {})
+  .filter((k) => /^l\d+$/.test(k)).map((k) => Number(k.slice(1))).sort((a, b) => a - b);
+const thumbSrc = (p, mediaBase) => { const w = rungWidths(p); return w.length ? mediaBase(p, `l${w[0]}`) : ''; };
+const viewSrc = (p, mediaBase) => {
+  const w = rungWidths(p);
+  if (!w.length) return '';
+  return mediaBase(p, `l${w.find((x) => x >= 1200) ?? w[w.length - 1]}`);
+};
+/* D1 stamps 'YYYY-MM-DD HH:MM:SS' in UTC */
+const stampToDate = (sql) => new Date(sql.replace(' ', 'T') + (/[Z+]/.test(sql.slice(10)) ? '' : 'Z'));
+const ago = (sql) => {
+  const m = Math.round((Date.now() - stampToDate(sql).getTime()) / 60000);
+  if (!Number.isFinite(m)) return sql.slice(0, 10);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.round(h / 24);
+  if (d < 14) return `${d}d ago`;
+  return sql.slice(0, 10);
+};
+const whenLocal = (sql) => stampToDate(sql).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+/* Notes pane state — survives load() re-renders so a reply never loses your
+ * place, and the coverage table can jump straight to a photo. */
+let notesState = null;      // { g, photos, comments, mediaBase, rows, byPhoto }
+let selectedPhotoId = null;
+let notesFilter = 'notes';  // 'notes' | 'all'
+let focusComposerNext = false;
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
 
 async function load() {
   const { gallery: g, photos, comments } = await api(`galleries/${id}`);
@@ -198,6 +231,13 @@ async function load() {
   const mediaBase = (p, kind) => `/api/admin/galleries/${g.id}/media/${p.id}/${kind}`;
   const markedPhotos = photos.filter((p) => p.marked);
   const vetoedPhotos = photos.filter((p) => p.vetoed);
+  const tally = new Map();
+  for (const c of comments) {
+    const t = tally.get(c.photo_id) ?? { n: 0, open: 0 };
+    t.n++;
+    if (!c.by_owner && !c.resolved) t.open++;
+    tally.set(c.photo_id, t);
+  }
   $('#matrix-body').innerHTML = `
     <p class="sel-line">${g.marks_state === 'submitted'
       ? `Selection submitted ${esc((g.marks_submitted_at || '').slice(0, 10))}${g.marks_note ? ` — <em>${esc(g.marks_note)}</em>` : ''}`
@@ -208,7 +248,7 @@ async function load() {
       ${g.marks_state === 'submitted' ? '<button class="btn--quiet btn" id="reopen">Reopen selections</button>' : ''}
     </div>
     <div class="table-scroll"><table class="matrix">
-    <thead><tr><th></th><th>Photo</th>${SHOWN.map((k) => `<th>${k}</th>`).join('')}<th>Ladder</th><th>Marked</th><th>No post</th><th>State</th></tr></thead>
+    <thead><tr><th></th><th>Photo</th>${SHOWN.map((k) => `<th>${k}</th>`).join('')}<th>Ladder</th><th>Marked</th><th>No post</th><th>Notes</th><th>State</th></tr></thead>
     <tbody>${photos.map((p) => {
       const cell = (k) => p.assets[k]
         ? `<td class="ok">✓ ${fmtBytes(p.assets[k].bytes)}</td>`
@@ -217,12 +257,17 @@ async function load() {
       const rungs = rungKeys.length;
       const missing = SHOWN.filter((k) => !p.assets[k]);
       return `<tr>
-        <td>${rungKeys.length ? `<img class="thumb" src="${mediaBase(p, rungKeys.sort()[0])}" alt="">` : '<span class="thumb"></span>'}</td>
+        <td>${rungKeys.length ? `<img class="thumb" src="${thumbSrc(p, mediaBase)}" alt="" loading="lazy">` : '<span class="thumb"></span>'}</td>
         <td>${esc(p.stem)}${p.version > 1 ? ` <span class="muted">v${p.version}</span>` : ''}</td>
         ${SHOWN.map(cell).join('')}
         <td class="${rungs > 0 ? 'ok' : 'miss'}">${rungs} rung${rungs === 1 ? '' : 's'}</td>
         <td class="${p.marked ? 'cell-mark' : 'miss'}"${p.marked ? ` title="marked by ${escAttr(p.marked_by)} · ${escAttr((p.marked_at || '').slice(0, 10))}"` : ''}>${p.marked ? '★' : '—'}</td>
         <td class="${p.vetoed ? 'cell-veto' : 'miss'}"${p.vetoed ? ` title="held back by ${escAttr(p.vetoed_by)} · ${escAttr((p.vetoed_at || '').slice(0, 10))}"` : ''}>${p.vetoed ? '✕' : '—'}</td>
+        <td class="cell-notes">${(() => {
+          const t = tally.get(p.id);
+          if (!t) return `<button class="notes-jump quiet" data-jump="${p.id}" title="Leave a note on this photo">—</button>`;
+          return `<button class="notes-jump${t.open ? ' open' : ''}" data-jump="${p.id}" title="${t.open ? `${t.open} awaiting a reply` : `${t.n} note${t.n === 1 ? '' : 's'}, all addressed`}">${t.open ? `${t.open} open` : t.n}</button>`;
+        })()}</td>
         <td class="${missing.filter((k) => k !== 'instagram').length ? 'miss' : 'ok'}">${missing.length ? 'missing ' + missing.join(', ') : 'ready'}</td>
       </tr>`;
     }).join('')}</tbody></table></div>
@@ -237,29 +282,20 @@ async function load() {
     await api(`galleries/${id}`, { method: 'PATCH', body: { reopen: true } });
     load();
   });
-
-  /* threads */
-  $('#threads-body').innerHTML = comments.length === 0
-    ? '<p class="muted">No client notes yet.</p>'
-    : `<ul class="thread">${comments.map((c) => `
-        <li class="${c.resolved ? 'resolved' : ''}" data-cid="${c.id}">
-          <p class="who"><span class="stem">${esc(c.stem)}</span> · ${c.by_owner ? 'Santiago' : esc(c.author)} · ${c.created_at.slice(0, 16).replace('T', ' ')}</p>
-          <p class="what">${esc(c.body)}</p>
-          ${c.by_owner ? '' : `<div class="ops">
-            <button data-op="reply">Reply</button>
-            ${c.resolved ? '' : '<button data-op="resolve">Mark addressed</button>'}
-          </div>`}
-        </li>`).join('')}</ul>`;
-  $('#threads-body').onclick = async (e) => {  // property assignment: re-running load() must not stack handlers
-    const op = e.target.dataset?.op;
-    if (!op) return;
-    const cid = e.target.closest('li').dataset.cid;
-    if (op === 'resolve') { await api(`comments/${cid}/resolve`, { method: 'POST' }); load(); }
-    if (op === 'reply') {
-      const body = prompt('Reply (the client sees this in the photo’s thread):');
-      if (body) { await api(`comments/${cid}/reply`, { method: 'POST', body: { body } }); load(); }
-    }
+  $('#matrix-body').onclick = (e) => {  // property assignment: load() re-runs
+    const jump = e.target.closest('[data-jump]');
+    if (!jump) return;
+    const pid = Number(jump.dataset.jump);
+    if (!notesState?.byPhoto.has(pid)) notesFilter = 'all';
+    selectedPhotoId = pid;
+    focusComposerNext = !notesState?.byPhoto.has(pid);
+    renderNotes();
+    $('#notes').scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  /* notes — the photo-centric review pane (renderNotes below) */
+  notesState = { g, photos, comments, mediaBase };
+  renderNotes();
 
   /* lifecycle */
   $('#lifecycle-body').innerHTML = `
@@ -283,6 +319,198 @@ async function load() {
     location.href = '/admin';
   });
 }
+
+/* ================= notes: photo-centric review ================= */
+
+/* The unit of feedback is the PHOTO (that is how the client writes it), so
+ * the pane is a strip of photos with their threads folded in, and one photo
+ * open at a time: picture, thread, reply. Selection and the strip's scroll
+ * survive re-renders; arrows / J K walk the strip, R writes, ⌘↩ sends. */
+function renderNotes() {
+  const { g, photos, comments, mediaBase } = notesState;
+  const body = $('#notes-body');
+  const byPhoto = new Map();
+  for (const c of [...comments].sort((a, b) =>
+    a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : a.id - b.id))
+    (byPhoto.get(c.photo_id) ?? byPhoto.set(c.photo_id, []).get(c.photo_id)).push(c);
+  const rows = photos.map((p) => {
+    const thread = byPhoto.get(p.id) ?? [];
+    const open = thread.filter((c) => !c.by_owner && !c.resolved).length;
+    return { p, thread, open, last: thread[thread.length - 1] ?? null };
+  });
+  const lastAt = (r) => r.last?.created_at ?? '';
+  const shown = (notesFilter === 'all' ? rows : rows.filter((r) => r.thread.length)).sort((a, b) =>
+    (b.open > 0) - (a.open > 0)
+    || (lastAt(b) > lastAt(a) ? 1 : lastAt(b) < lastAt(a) ? -1 : 0)
+    || a.p.stem.localeCompare(b.p.stem));
+  Object.assign(notesState, { rows, byPhoto, shown });
+
+  const noted = rows.filter((r) => r.thread.length);
+  const needReply = noted.filter((r) => r.open).length;
+  if (!shown.some((r) => r.p.id === selectedPhotoId)) selectedPhotoId = shown[0]?.p.id ?? null;
+  const cur = shown.find((r) => r.p.id === selectedPhotoId);
+
+  const stripScroll = $('.strip', body)?.scrollTop ?? 0;
+  const stat = !photos.length ? 'Add photos first — notes arrive once the client starts writing.'
+    : !noted.length ? 'No client notes yet.'
+    : `${noted.length} photo${noted.length === 1 ? '' : 's'} with notes · ${needReply
+        ? `<b>${needReply} need${needReply === 1 ? 's' : ''} a reply</b>` : 'all addressed'}`;
+  body.innerHTML = `
+    <div class="review__head">
+      <p class="review__stat">${stat}</p>
+      ${photos.length ? `<div class="seg" role="tablist" aria-label="Which photos">
+        <button role="tab" data-filter="notes" class="${notesFilter === 'notes' ? 'on' : ''}" aria-selected="${notesFilter === 'notes'}">With notes</button>
+        <button role="tab" data-filter="all" class="${notesFilter === 'all' ? 'on' : ''}" aria-selected="${notesFilter === 'all'}">All photos</button>
+      </div>` : ''}
+    </div>
+    ${!cur ? (photos.length ? `<p class="muted review__empty">Nothing here yet. <button class="linklike" data-filter="all">Open a photo to leave the first note</button> — the client sees it in that photo's thread.</p>` : '')
+    : `<div class="review">
+      <ol class="strip" role="listbox" aria-label="Photos">${shown.map(({ p, thread, open, last }) => `
+        <li class="strip__item${p.id === selectedPhotoId ? ' is-selected' : ''}${open ? ' has-open' : ''}" role="option"
+            aria-selected="${p.id === selectedPhotoId}" tabindex="${p.id === selectedPhotoId ? 0 : -1}" data-pid="${p.id}">
+          <img class="strip__thumb" src="${thumbSrc(p, mediaBase)}" alt="" loading="lazy" decoding="async" style="background:${escAttr(p.color)}">
+          <span class="strip__meta">
+            <span class="strip__stem">${esc(p.stem)}${p.marked ? ' <i class="mk" title="marked for polish">★</i>' : ''}${p.vetoed ? ' <i class="vt" title="do not post">✕</i>' : ''}</span>
+            <span class="strip__line">${last ? `${last.by_owner ? 'You' : esc(last.author)} · ${esc(last.body)}` : 'no notes'}</span>
+          </span>
+          ${thread.length ? `<span class="strip__count${open ? ' open' : ''}" title="${open ? `${open} awaiting a reply` : `${thread.length} note${thread.length === 1 ? '' : 's'}`}">${open || thread.length}</span>` : ''}
+        </li>`).join('')}</ol>
+      ${detailHtml(cur)}
+    </div>`}`;
+  const strip = $('.strip', body);
+  if (strip) {
+    strip.scrollTop = stripScroll;
+    $('.strip__item.is-selected', strip)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  if (focusComposerNext) { focusComposerNext = false; $('.composer textarea', body)?.focus(); }
+
+  body.onclick = async (e) => {
+    const filter = e.target.closest('[data-filter]');
+    if (filter) { notesFilter = filter.dataset.filter; renderNotes(); return; }
+    const item = e.target.closest('.strip__item');
+    if (item) { selectPhoto(Number(item.dataset.pid)); return; }
+    const op = e.target.closest('[data-op]');
+    if (!op) return;
+    op.disabled = true;
+    try {
+      if (op.dataset.op === 'toggle') {
+        const c = comments.find((x) => x.id === Number(op.closest('li').dataset.cid));
+        await api(`comments/${c.id}/resolve`, { method: 'POST', body: { resolved: !c.resolved } });
+      } else if (op.dataset.op === 'address-all') {
+        await api(`galleries/${g.id}/photos/${selectedPhotoId}/resolve`, { method: 'POST', body: { resolved: true } });
+      }
+      await load();
+    } catch (err) { op.disabled = false; alert(err.message); }
+  };
+  body.onsubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const ta = form.elements.body;
+    const text = ta.value.trim();
+    if (!text) return ta.focus();
+    const err = $('.composer__err', form);
+    err.hidden = true;
+    ta.disabled = true;
+    form.querySelector('[type="submit"]').disabled = true;
+    try {
+      await api(`galleries/${g.id}/photos/${form.dataset.pid}/reply`, { method: 'POST', body: { body: text } });
+      focusComposerNext = true;
+      await load();
+    } catch (e2) {
+      err.textContent = `Couldn't send — ${e2.message}`;
+      err.hidden = false;
+      ta.disabled = false;
+      form.querySelector('[type="submit"]').disabled = false;
+      ta.focus();
+    }
+  };
+  body.oninput = (e) => {
+    if (!e.target.matches('.composer textarea')) return;
+    e.target.form.querySelector('[type="submit"]').disabled = !e.target.value.trim();
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 224)}px`;
+  };
+}
+
+function detailHtml({ p, thread, open }) {
+  const { g, mediaBase } = notesState;
+  const w = p.width || 3, h = p.height || 2;
+  const lastClient = [...thread].reverse().find((c) => !c.by_owner);
+  const name = lastClient?.author || g.client_name || 'the client';
+  const placeholder = thread.length ? `Reply to ${name} — it lands in this photo's thread` : `Leave ${name} a note on this photo`;
+  return `<section class="detail" data-pid="${p.id}" aria-live="polite">
+    <figure class="detail__fig" style="--ar:${(w / h).toFixed(4)};aspect-ratio:${w}/${h};width:min(100%, calc(62vh * var(--ar)));background-color:${escAttr(p.color)}${p.thumbhash ? `;background-image:url(${escAttr(p.thumbhash)})` : ''}">
+      ${viewSrc(p, mediaBase) ? `<img class="detail__img" src="${viewSrc(p, mediaBase)}" alt="" decoding="async" onload="this.classList.add('is-loaded')">` : ''}
+    </figure>
+    <header class="detail__head">
+      <h3 class="detail__stem">${esc(p.stem)}${p.version > 1 ? ` <span class="muted">v${p.version}</span>` : ''}</h3>
+      <div class="detail__chips">
+        ${p.marked ? `<span class="chip mark" title="by ${escAttr(p.marked_by)} · ${escAttr((p.marked_at || '').slice(0, 10))}">★ marked</span>` : ''}
+        ${p.vetoed ? `<span class="chip veto" title="by ${escAttr(p.vetoed_by)} · ${escAttr((p.vetoed_at || '').slice(0, 10))}">✕ do not post</span>` : ''}
+        ${open ? `<button class="btn btn--quiet btn--sm" data-op="address-all" title="Mark every open note on this photo addressed (A)">${open === 1 ? 'Mark addressed' : `Mark all ${open} addressed`}</button>`
+          : thread.some((c) => !c.by_owner) ? '<span class="chip done">addressed</span>' : ''}
+      </div>
+    </header>
+    <ul class="thread thread--review">${thread.length ? thread.map((c) => `
+      <li class="${c.by_owner ? 'mine' : ''}${!c.by_owner && c.resolved ? ' resolved' : ''}" data-cid="${c.id}">
+        <p class="who"><span class="${c.by_owner ? 'owner' : ''}">${c.by_owner ? 'Santiago' : esc(c.author)}</span>
+          <time datetime="${escAttr(c.created_at)}" title="${escAttr(whenLocal(c.created_at))}">${ago(c.created_at)}</time>
+          ${c.by_owner ? '' : `<button class="tick" data-op="toggle" aria-pressed="${!!c.resolved}" title="${c.resolved ? 'Reopen this note' : 'Mark this note addressed'}">${c.resolved ? 'addressed ✓' : 'mark addressed'}</button>`}</p>
+        <p class="what">${esc(c.body)}</p>
+      </li>`).join('') : '<li class="thread__empty"><p class="what muted">No notes on this photo yet.</p></li>'}</ul>
+    <form class="composer" data-pid="${p.id}">
+      <textarea name="body" rows="2" maxlength="4000" placeholder="${escAttr(placeholder)}" aria-label="Reply"></textarea>
+      <p class="composer__err muted" hidden></p>
+      <div class="composer__row">
+        <span class="muted composer__hint">${MOD}↩ sends · ↑ ↓ move between photos · R to write</span>
+        <button class="btn" type="submit" disabled>${thread.length ? 'Reply' : 'Send note'}</button>
+      </div>
+    </form>
+  </section>`;
+}
+
+/* Re-paint only the open photo: the strip keeps its scroll and its images. */
+function selectPhoto(pid) {
+  if (!notesState) return;
+  const row = notesState.shown.find((r) => r.p.id === pid);
+  if (!row) return;
+  selectedPhotoId = pid;
+  const body = $('#notes-body');
+  for (const el of body.querySelectorAll('.strip__item')) {
+    const on = Number(el.dataset.pid) === pid;
+    el.classList.toggle('is-selected', on);
+    el.setAttribute('aria-selected', String(on));
+    el.tabIndex = on ? 0 : -1;
+    if (on) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  $('.detail', body).outerHTML = detailHtml(row);
+}
+
+/* Keyboard, only while the pane is on screen — the arrows still scroll the
+ * page everywhere else. */
+document.onkeydown = (e) => {
+  if (!notesState || e.metaKey || e.ctrlKey || e.altKey) return;
+  const typing = /^(input|textarea|select)$/i.test(e.target.tagName) || e.target.isContentEditable;
+  if (typing) {
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  const rect = $('#notes').getBoundingClientRect();
+  if (rect.bottom < 0 || rect.top > innerHeight) return;
+  const items = [...document.querySelectorAll('#notes-body .strip__item')];
+  if (!items.length) return;
+  const i = items.findIndex((el) => Number(el.dataset.pid) === selectedPhotoId);
+  const go = (n) => { e.preventDefault(); selectPhoto(Number(items[Math.max(0, Math.min(items.length - 1, n))].dataset.pid)); };
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'j') go(i + 1);
+  else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'k') go(i - 1);
+  else if (e.key === 'r' || e.key === 'Enter') { e.preventDefault(); $('#notes-body .composer textarea')?.focus(); }
+  else if (e.key === 'a') $('#notes-body [data-op="address-all"]')?.click();
+};
+document.addEventListener('keydown', (e) => {
+  // ⌘↩ / Ctrl↩ sends from the composer (the handler above yields while typing)
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && e.target.matches?.('.composer textarea'))
+    { e.preventDefault(); e.target.form.requestSubmit(); }
+});
 
 /* ================= browser ingest ================= */
 

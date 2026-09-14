@@ -156,11 +156,17 @@ export async function handleAdmin(request: Request, env: Env, path: string[]): P
     if (rest[2] === 'media' && rest[3] && rest[4] && method === 'GET')
       return adminMedia(env, gallery, rest[3], rest[4]);
     if (rest[2] === 'photos' && rest[3] && method === 'DELETE') return removePhoto(env, gallery, rest[3]);
+    // Notes are a per-PHOTO thread (that is how the client sees them), so the
+    // admin review pane talks in photos: reply into a thread, address a thread.
+    if (rest[2] === 'photos' && rest[3] && rest[4] === 'reply' && method === 'POST')
+      return replyPhoto(request, env, gallery, rest[3]);
+    if (rest[2] === 'photos' && rest[3] && rest[4] === 'resolve' && method === 'POST')
+      return resolvePhotoNotes(request, env, gallery, rest[3]);
   }
   if (rest[0] === 'comments' && rest[1] && rest[2] === 'reply' && method === 'POST')
     return replyComment(request, env, Number(rest[1]));
   if (rest[0] === 'comments' && rest[1] && rest[2] === 'resolve' && method === 'POST')
-    return resolveComment(env, Number(rest[1]));
+    return resolveComment(request, env, Number(rest[1]));
   return json({ error: 'not found' }, 404);
 }
 
@@ -468,8 +474,49 @@ async function replyComment(request: Request, env: Env, commentId: number): Prom
   return json({ ok: true });
 }
 
-async function resolveComment(env: Env, commentId: number): Promise<Response> {
-  await env.DB.prepare('UPDATE comments SET resolved = 1 WHERE id = ?').bind(commentId).run();
+/** `{ resolved: false }` un-addresses — a note marked done by mistake must be
+ * one click to bring back, not a database visit. Default stays "resolve". */
+async function resolveComment(request: Request, env: Env, commentId: number): Promise<Response> {
+  const body = (await request.json().catch(() => ({}))) as { resolved?: unknown };
+  const resolved = body.resolved === false ? 0 : 1;
+  await env.DB.prepare('UPDATE comments SET resolved = ? WHERE id = ?').bind(resolved, commentId).run();
+  return json({ ok: true });
+}
+
+async function photoInGallery(env: Env, gallery: GalleryRow, photoId: string): Promise<PhotoRow | null> {
+  const pid = Number(photoId);
+  if (!Number.isInteger(pid)) return null;
+  return env.DB.prepare('SELECT * FROM photos WHERE id = ? AND gallery_id = ? AND removed = 0')
+    .bind(pid, gallery.id)
+    .first<PhotoRow>();
+}
+
+/** Santiago writes into a photo's thread — with or without a client note to
+ * answer, so a proactive "I softened the shadow here" is possible. The client
+ * page already renders owner comments inline (by_owner = 1). */
+async function replyPhoto(request: Request, env: Env, gallery: GalleryRow, photoId: string): Promise<Response> {
+  const body = (await request.json().catch(() => null)) as { body?: string } | null;
+  const text = String(body?.body ?? '').trim().slice(0, 4000);
+  if (!text) return json({ error: 'empty' }, 400);
+  const photo = await photoInGallery(env, gallery, photoId);
+  if (!photo) return json({ error: 'unknown photo' }, 404);
+  await env.DB.prepare(
+    "INSERT INTO comments (photo_id, author, by_owner, body, notified) VALUES (?, 'Santiago', 1, ?, 1)"
+  )
+    .bind(photo.id, text)
+    .run();
+  return json({ ok: true });
+}
+
+/** Address (or re-open) every client note on one photo in one action. */
+async function resolvePhotoNotes(request: Request, env: Env, gallery: GalleryRow, photoId: string): Promise<Response> {
+  const body = (await request.json().catch(() => ({}))) as { resolved?: unknown };
+  const resolved = body.resolved === false ? 0 : 1;
+  const photo = await photoInGallery(env, gallery, photoId);
+  if (!photo) return json({ error: 'unknown photo' }, 404);
+  await env.DB.prepare('UPDATE comments SET resolved = ? WHERE photo_id = ? AND by_owner = 0')
+    .bind(resolved, photo.id)
+    .run();
   return json({ ok: true });
 }
 
@@ -479,7 +526,9 @@ async function listGalleries(env: Env): Promise<Response> {
   const r = await env.DB.prepare(
     `SELECT g.*,
             (SELECT COUNT(*) FROM photos p WHERE p.gallery_id = g.id AND p.removed = 0) AS photo_count,
-            (SELECT COUNT(*) FROM photos p WHERE p.gallery_id = g.id AND p.marked = 1 AND p.removed = 0) AS marked_count
+            (SELECT COUNT(*) FROM photos p WHERE p.gallery_id = g.id AND p.marked = 1 AND p.removed = 0) AS marked_count,
+            (SELECT COUNT(*) FROM comments c JOIN photos p ON p.id = c.photo_id
+              WHERE p.gallery_id = g.id AND p.removed = 0 AND c.by_owner = 0 AND c.resolved = 0) AS open_notes
        FROM galleries g ORDER BY g.created_at DESC`
   ).all();
   return json({ galleries: r.results });
@@ -559,9 +608,9 @@ async function adminGallery(env: Env, id: number): Promise<Response> {
     <div id="rename-slot"></div>
   </header>
   <section class="panel" id="share"><h2>Share</h2><div id="share-body"></div></section>
-  <section class="panel" id="ingest"><h2>Add photos</h2><div id="ingest-body"></div></section>
+  <section class="panel" id="notes"><h2>Notes</h2><div id="notes-body"></div></section>
   <section class="panel" id="matrix"><h2>Photos</h2><div id="matrix-body">Loading…</div></section>
-  <section class="panel" id="threads"><h2>Feedback</h2><div id="threads-body"></div></section>
+  <section class="panel" id="ingest"><h2>Add photos</h2><div id="ingest-body"></div></section>
   <section class="panel" id="lifecycle"><h2>Lifecycle</h2><div id="lifecycle-body"></div></section>
 </main>
 <script type="module" src="/admin/admin.js"></script>`
