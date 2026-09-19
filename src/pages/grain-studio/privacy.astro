@@ -1,0 +1,40 @@
+---
+/**
+ * Grain Studio — privacy policy (required by App Store Connect).
+ * The app collects nothing; this page says so plainly.
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Seo from '../../components/Seo.astro';
+import { SITE } from '../../config';
+---
+
+<BaseLayout>
+  <Seo slot="head" title="Grain Studio · Privacy" description="Grain Studio collects nothing. Your photographs never leave your Mac." ogImage="/og/home.jpg" />
+  <article class="column gs">
+    <p class="eyebrow">Grain Studio</p>
+    <h1>Privacy policy</h1>
+    <p class="gs__date">Effective 9 September 2026</p>
+
+    <h2>What Grain Studio collects</h2>
+    <p>Nothing. Grain Studio runs entirely on your Mac. It has no account, no analytics, no crash reporter of its own, and it does not connect to the internet except through Apple's App Store frameworks to handle the free trial and the unlock purchase. Your photographs are read from the files you choose and written to the folder you choose; they are never uploaded anywhere.</p>
+
+    <h2>Purchases</h2>
+    <p>The trial and the unlock are processed by Apple through the Mac App Store under Apple's terms. Grain Studio receives only a signed confirmation that the purchase exists; it never sees your payment details.</p>
+
+    <h2>Files and folders</h2>
+    <p>Grain Studio is sandboxed by macOS. It can read the photos you open or drop onto it, write to the output folder you select (by default your Pictures folder), and move an original AVIF to the Trash only when you have asked it to. A cache of grain plates is kept in the app's own container so later photos process faster; deleting the app removes it.</p>
+
+    <h2>Logs</h2>
+    <p>A processing log is kept inside the app's container to help you diagnose problems. It is never sent anywhere unless you choose to share it.</p>
+
+    <h2>Contact</h2>
+    <p><a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+  </article>
+</BaseLayout>
+
+<style>
+  .gs { padding-block: clamp(2rem, 8vh, 5rem); max-width: 42rem; }
+  .gs h2 { margin-top: var(--space-7); font-size: 1.15rem; }
+  .gs p { margin-top: var(--space-4); line-height: 1.6; }
+  .gs__date { color: var(--line); font-size: 0.9rem; }
+</style>

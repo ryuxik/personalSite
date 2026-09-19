@@ -1,0 +1,27 @@
+---
+/**
+ * Grain Studio — landing (marketing URL for the App Store record; grows into the sales page).
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Seo from '../../components/Seo.astro';
+---
+
+<BaseLayout>
+  <Seo slot="head" title="Grain Studio" description="Make digital photos look like film — real grain, halation and emulsion softness — and keep them HDR for Apple Photos, Instagram and RedNote. A Mac app." ogImage="/og/home.jpg" />
+  <article class="column gs">
+    <p class="eyebrow">Grain Studio · for the Mac</p>
+    <h1>Make digital photos look like film. Keep them HDR.</h1>
+    <p>Drop in your photos, pick a look, press Process. You get back files that look like a good film scan — real grain, the glow film makes around bright lights, the soft edges of an emulsion — and that still show as HDR in Apple Photos, Instagram and RedNote.</p>
+    <p>The grain is measured from real 120 and 35 mm negatives and sits in the picture the way film grain does: bigger in the shadows, finer in the highlights, gone in pure white. Every option in the app has a “?” with pictures and a plain explanation of each choice.</p>
+    <p>Start from a Lightroom HDR export, an iPhone HEIC, a 16-bit scan or a camera RAW. Get a full-resolution master plus Instagram and RedNote versions with the same grain — 3:4, 4:5, 1:1 or a 9:16 reel, cropped or framed on a clean border. A whole shoot in one batch; nothing is ever overwritten. No account, no upload: your photos never leave your Mac.</p>
+    <p class="gs__cta">Coming to the Mac App Store. Free for 7 days at full quality, then a one-time unlock — no subscription.</p>
+    <p class="gs__links"><a href="/grain-studio/support">Support</a> · <a href="/grain-studio/privacy">Privacy</a></p>
+  </article>
+</BaseLayout>
+
+<style>
+  .gs { padding-block: clamp(2rem, 8vh, 5rem); max-width: 42rem; }
+  .gs p { margin-top: var(--space-4); line-height: 1.6; }
+  .gs__cta { font-family: var(--grotesque); font-weight: 500; }
+  .gs__links a { color: var(--accent); }
+</style>

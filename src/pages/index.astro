@@ -17,29 +17,27 @@ import { SITE } from '../config';
 const stream = await getStream('overview');
 
 /**
- * Editorial interstitial CTAs, keyed by the shoot slug they follow. Three,
- * deliberately: after the people block, once mid-stream for concept work, and
- * as the closing note. Caption-scale, quiet — the shoots are the pitch; these
- * are just the door. More would turn the gallery into a carousel ad.
+ * Editorial interstitial CTAs, keyed by the shoot slug they follow. Two,
+ * deliberately: once early with the offer in one line, and as the closing
+ * note. Caption-scale, quiet — the shoots are the pitch; these are just the
+ * door. More would turn the gallery into a carousel ad.
+ *
+ * Keys must be shoots with `section: overview` (the default) AND a photo
+ * ladder in public/photos/, or the CTA silently never renders. Today the
+ * overview runs odyssey-period, contrast, longing, paprika, dynamic, lost.
  */
 const STREAM_CTAS: Record<string, { eyebrow: string; text: string; href: string; label: string }> = {
-  'gl-high-line': {
-    eyebrow: 'Concept & editorial work',
-    text: 'Have an idea that needs building? It starts with a free 20-minute consult.',
-    href: '/sessions/#consult',
-    label: 'Start a project',
+  contrast: {
+    eyebrow: 'Cinematic portrait session',
+    text: 'Two hours on location. 25–40 finished HDR frames, three retouched. $650.',
+    href: '/sessions/',
+    label: 'See the session',
   },
-  'brooklyn-nights': {
-    eyebrow: 'Portraits, headshots, personal sessions',
-    text: 'Book a session like these. Fixed scope, on the calendar in two minutes.',
+  lost: {
+    eyebrow: 'Book a session',
+    text: 'Pick a date, pay a $150 deposit, done in two minutes.',
     href: '/sessions/#book',
     label: 'See open times',
-  },
-  'on-the-wall': {
-    eyebrow: 'Work with me',
-    text: 'New York based, travels well. Sessions, portraits, and commissioned projects.',
-    href: '/sessions/',
-    label: 'Sessions & pricing',
   },
 };
 ---
@@ -49,7 +47,7 @@ const STREAM_CTAS: Record<string, { eyebrow: string; text: string; href: string;
       which is the brand + city string search results should show. */}
   <Seo
     slot="head"
-    description="Portrait and headshot photographer in New York. Creative portraiture, personal and commissioned work, sessions bookable online."
+    description="Portrait photographer in New York. Cinematic portrait sessions on location, shot like film stills, bookable online."
     ogImage="/og/home.jpg"
   />
   <PersonJsonLd slot="head" name={SITE.person} />

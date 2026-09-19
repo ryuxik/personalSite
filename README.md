@@ -1,13 +1,13 @@
 # ryuxik.io
 
-Photography portfolio and booking site for Ryu — creative portraiture in front, service-tier
-booking one level down. Static site, no client-side framework, $0/mo to run.
+Photography portfolio and booking site for Santiago — creative portraiture in front, one bookable
+session one level down. Static site, no client-side framework, $0/mo to run.
 
 Replaces the 2018 Angular app that used to live here. The full build contract is [`SPEC.md`](./SPEC.md).
 
 ```
 /              Overview — the curated photo stream
-/sessions      Tracks, tiers, Cal.com booking, testimonials, FAQ, prep, inquiry form
+/sessions      The Cinematic Portrait Session: scope, price, Cal.com booking, FAQ, inquiry
 /information   Bio + contact
 ```
 
@@ -200,8 +200,7 @@ Every user-tunable string is in **`src/config.ts`** — one file, no hunting.
 | `email`        | The large mailto link on /information, JSON-LD, and the Cal-embed fallback             |
 | `instagram`    | Footer link, /information link, JSON-LD `sameAs`                                        |
 | `city`         | `ProfessionalService` address + `areaServed`. **Empty = both omitted cleanly**, never a blank address |
-| `calConsult`   | `data-cal-link` for the free consult embed                                              |
-| `calHeadshots` | `data-cal-link` for the self-serve session embed                                        |
+| `calSession`   | `data-cal-link` for the session booking embed                                           |
 | `formEndpoint` | Inquiry form POST target. **Empty = the form is hidden and a mailto block shows instead** |
 
 Design tokens (colors, type stacks, spacing scale) live at the top of `src/styles/global.css`.
@@ -213,7 +212,7 @@ Change a hex there and it propagates everywhere, including the generated OG card
   description, canonical, Open Graph and Twitter tags. BaseLayout's fallback tags switch off
   automatically when that slot is filled, so nothing is ever emitted twice.
 - JSON-LD: `PersonJsonLd.astro` on /information, `SessionsJsonLd.astro`
-  (`ProfessionalService` + one `Service` per tier) on /sessions.
+  (`LocalBusiness` + one `Service` for the session) on /sessions.
 - Sitemaps: `/sitemap-index.xml` from `@astrojs/sitemap`, plus `/image-sitemap.xml`
   (`src/pages/image-sitemap.xml.ts`) listing every stream photo with its caption.
   `public/robots.txt` points at both.

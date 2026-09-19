@@ -1,0 +1,38 @@
+---
+/**
+ * Grain Studio — support page (required by App Store Connect).
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Seo from '../../components/Seo.astro';
+import { SITE } from '../../config';
+---
+
+<BaseLayout>
+  <Seo slot="head" title="Grain Studio · Support" description="Help for Grain Studio, the film grain and halation app for the Mac." ogImage="/og/home.jpg" />
+  <article class="column gs">
+    <p class="eyebrow">Grain Studio</p>
+    <h1>Support</h1>
+    <p>Write to <a href={`mailto:${SITE.email}?subject=Grain%20Studio`}>{SITE.email}</a>. Include the macOS version, the file type you were processing, and the log (in the app: Log → Show log file).</p>
+
+    <h2>Requirements</h2>
+    <p>macOS 15 or later on Apple silicon. Inputs: HDR or SDR photos in AVIF, HEIC, JPEG XL, HDR PNG, TIFF (8/16/32-bit), JPEG, and camera RAW through Apple's RAW pipeline.</p>
+
+    <h2>Trial and unlock</h2>
+    <p>The download is free. Start the 7-day trial from the card at the top of the window; everything is on at full quality. After 7 days processing pauses until you unlock — a one-time purchase, no subscription. If you unlocked before and it does not show, use Grain Studio → Restore Purchases.</p>
+
+    <h2>First photo is slow</h2>
+    <p>The first photo of a new camera size builds the grain plates once, which takes about a minute on an M-series Mac. They are cached in the app's container; later photos take 15–30 seconds.</p>
+
+    <h2>Where the files go</h2>
+    <p>Pictures / Grain by default, or any folder you choose with Change…. Files are never overwritten: outputs get “-grain”, “-instagram” and “-rednote” names, and a re-run adds “-2”. Originals go to the Trash only if you asked for it and only after the full-resolution master was written.</p>
+
+    <h2>HDR looks flat in another app</h2>
+    <p>Photos, Instagram and RedNote read the gain map and show the HDR rendition. Apps that are not colour-managed show the SDR base, which is encoded in Display P3 like an iPhone photo. If an app shows the image washed out, it is ignoring the colour profile — ask its maker, or export a plain SDR copy from that app.</p>
+  </article>
+</BaseLayout>
+
+<style>
+  .gs { padding-block: clamp(2rem, 8vh, 5rem); max-width: 42rem; }
+  .gs h2 { margin-top: var(--space-7); font-size: 1.15rem; }
+  .gs p { margin-top: var(--space-4); line-height: 1.6; }
+</style>

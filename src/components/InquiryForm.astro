@@ -21,12 +21,7 @@ const { id = 'inquiry' } = Astro.props;
 const endpoint = SITE.formEndpoint.trim();
 const hasEndpoint = endpoint.length > 0;
 
-const SESSION_TYPES = [
-  'Headshots',
-  'Portrait session',
-  'Creative/editorial project',
-  'Other',
-];
+const SESSION_TYPES = ['Cinematic portrait session', 'Something else'];
 ---
 
 {
@@ -68,7 +63,7 @@ const SESSION_TYPES = [
           <select class="inquiry__input inquiry__select" id={`${id}-type`} name="session-type" required>
             {/* Empty + disabled default so `required` actually bites: without it
                 the first option is pre-selected and every enquiry from someone
-                who ignores the dropdown arrives tagged "Headshots". */}
+                who ignores the dropdown arrives tagged with the first option. */}
             <option value="" disabled selected>Choose one</option>
             {SESSION_TYPES.map((type) => (
               <option value={type}>{type}</option>
@@ -124,7 +119,7 @@ const SESSION_TYPES = [
         <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
       </p>
       <p class="mailto__hint">
-        Tell me the kind of session, a rough date window, and what you want the pictures for.
+        Tell me a rough date window and what you want the pictures for.
       </p>
       <p class="mailto__reply inquiry__reply">I reply within 24 hours.</p>
     </div>

@@ -8,43 +8,40 @@ Nothing here needs an account you already have. Steps 1 and 3 create the two you
 
 ---
 
-## 1. Cal.com — account and the two event types
+## 1. Cal.com — account and the one event type
 
-The page hardcodes nothing; both embeds read their `data-cal-link` from `src/config.ts`. The
-slugs below must match those values **exactly**, or the embed renders Cal's "event not found".
+The page hardcodes nothing; the embed reads its `data-cal-link` from `src/config.ts`. The slug
+below must match that value **exactly**, or the embed renders Cal's "event not found".
 
 1. Sign up at [cal.com](https://cal.com) and claim the username **`ryuxik`** during onboarding.
-   Both config values start with it (`ryuxik/intro-call`, `ryuxik/headshots`). If the username is
-   taken, pick another and update `calConsult` + `calHeadshots` in `src/config.ts` to match.
+   The config value starts with it (`ryuxik/cinematic-portrait`). If the username is taken, pick
+   another and update `calSession` in `src/config.ts` to match.
 2. Connect a calendar (Google/Apple/Outlook) so Cal can read your real availability. Skipping
    this is the #1 cause of double-bookings.
 3. Set your **Availability** schedule — the hours you will actually shoot, not the hours you are awake.
-4. **Event type 1 — the free consult.**
-   - Title: `Intro call` → check that the URL slug lands on **`intro-call`** (edit it if Cal
-     generates `intro-call-1` or similar).
-   - Duration: **20 minutes**. Location: Cal Video or phone.
-   - Price: none. This one is deliberately free — it is the top of the creative-project track.
-5. **Event type 2 — the self-serve session.**
-   - Title: `Headshots` → slug must be **`headshots`**.
-   - Duration: your real headshot block (60–90 min is typical). TODO(ryu): decide.
-   - Location: your studio address or "to be confirmed".
-6. **Stripe retainer on the headshots event only.**
+4. **The event type — the session.**
+   - Title: `Cinematic Portrait Session` → check that the URL slug lands on
+     **`cinematic-portrait`** (edit it if Cal generates something longer).
+   - Duration: **120 minutes**. The page promises two hours.
+   - Location: "to be confirmed". Every session is on location, and the planning call settles where.
+5. **Stripe deposit on the event.**
    - Cal.com → **Apps** → **Stripe** → Install → connect (or create) your Stripe account.
-   - Open the `Headshots` event type → **Apps** tab → enable Stripe → set the **retainer**
-     amount, not the full session fee. Cal charges this at booking time; you invoice the
-     balance after delivery.
-   - The FAQ copy on /sessions says **non-refundable retainer** with a **48-hour reschedule
-     window**. Make the Stripe description and your Cal cancellation policy say the same thing,
-     or the page is writing cheques your booking flow does not honour.
+   - Open the event type → **Apps** tab → enable Stripe → set the amount to the **$150 deposit**,
+     not the full session fee. Cal charges this at booking time; the balance is due on the day
+     of the shoot.
+   - The copy on /sessions says: the $150 deposit comes off the total, reschedules are free with
+     48 hours notice, cancellations a week or more out are refunded in full, inside a week the
+     deposit stays as credit, and same-day cancellations and no-shows forfeit it. Make the Stripe
+     description and your Cal cancellation policy say the same thing, or the page is writing
+     cheques your booking flow does not honour.
    - Test in Stripe **test mode** first (step 8), then flip to live keys.
-7. **Buffers and lead times** — on both event types, **Limits** tab:
+6. **Buffers and lead times** — **Limits** tab:
    - Before/after event buffer: **30 minutes** (travel, setup, teardown).
-   - Minimum notice: **48 hours** on `headshots` (matches the reschedule window), **4 hours**
-     on `intro-call` (a call is cheap to take).
+   - Minimum notice: **48 hours** (matches the reschedule window).
    - Future booking limit: rolling **60 days**, so your calendar can't get mortgaged a year out.
-   - Optional: cap `headshots` at 1–2 bookings/day so you don't book three shoots back to back.
+   - Optional: cap at 1–2 bookings/day so you don't book three shoots back to back.
 
-> The embeds lazy-load on scroll and show a styled fallback ("Email {email} and I'll reply
+> The embed lazy-loads on scroll and shows a styled fallback ("Email {email} and I'll reply
 > within 24h") if Cal is blocked or slow. Nothing breaks if this step is delayed — the page just
 > shows the fallback. Ship without it if you must.
 
@@ -302,13 +299,11 @@ Google has crawled it.
 - [ ] Exactly one `<title>`, one canonical, one meta description per page. View source and count.
 - [ ] Canonicals are absolute, apex-domain, and match the sitemap's trailing-slash form.
 - [ ] [Rich Results Test](https://search.google.com/test/rich-results) on `/information`
-      (`Person`) and `/sessions` (`ProfessionalService` + three `Service` nodes). Zero errors.
-      A warning about missing `address`/`priceRange` is expected while `SITE.city` and the tier
-      prices are placeholders — those are omitted on purpose, not broken.
-- [ ] Both Cal embeds load on `/sessions`. Then block `cal.com` in devtools and reload: the
+      (`Person`) and `/sessions` (`LocalBusiness` + one `Service` node). Zero errors.
+- [ ] The Cal embed loads on `/sessions`. Then block `cal.com` in devtools and reload: the
       fallback email block must appear, never an empty box.
-- [ ] Book a real test slot on each event type. Confirm the calendar invite, the confirmation
-      email, and — for `headshots` — the Stripe charge. Refund it and cancel the booking.
+- [ ] Book a real test slot. Confirm the calendar invite, the confirmation email, and the
+      Stripe deposit. Refund it and cancel the booking.
 - [ ] If the inquiry form is live: submit it once and confirm the message arrives.
 - [ ] Lighthouse mobile on `/`: LCP under 2.5s, CLS near zero. Exactly one image on the page is
       `loading="eager" fetchpriority="high" decoding="sync"` — the first frame, never lazy. Check
@@ -352,9 +347,9 @@ Snapshot at the time of writing, grouped by what it costs you to leave it:
 - [ ] `src/pages/information.astro` — five inline spans in the bio: **origin**, **training**,
       **one credential**, **where the work appears**, **city**. They render as visible
       `TODO(ryu)` chips on the live page. This is the single highest-priority item.
-- [ ] `src/pages/sessions.astro` — tier names, prices and deliverable counts
-      ("starting at $TODO"); the two testimonial blockquotes (real quote, name, role, photo);
-      the turnaround windows in the FAQ; the travel radius answer.
+- [ ] `src/pages/sessions.astro` — confirm every number in the `SESSION` const (price, gallery
+      size, retouch count, turnaround) and the travel radius answer. Testimonials stay off the
+      page until real quotes exist.
 - [ ] `src/components/InquiryForm.astro` — the "I reply within 24 hours" window (twice).
 - [ ] `src/content/shoots/*/index.md` — all three shoots are generated placeholders whose bodies
       say so. Replace the folders with real work (see README § Add a shoot) and delete
@@ -370,15 +365,15 @@ Snapshot at the time of writing, grouped by what it costs you to leave it:
 - [ ] `src/config.ts` → `city` — while empty, `ProfessionalService` ships with **no** `address`
       and **no** `areaServed`. That is deliberate and clean, but it costs you local SEO. Filling
       it in is the cheapest ranking win on this list.
-- [ ] `src/config.ts` → `calConsult` / `calHeadshots` — must match the step-1 slugs.
+- [ ] `src/config.ts` → `calSession` — must match the step-1 slug.
 - [ ] `src/config.ts` → `formEndpoint` — empty until you pick an option in step 2.
 
 ### Non-blocking — quality and polish
 
 - [ ] `src/components/Seo.astro` — add `twitter:creator` once the X/Twitter handle is confirmed.
-- [ ] `src/components/SessionsJsonLd.astro` — add `offers` (price + currency) per tier and
-      `priceRange` on the business node **only after** the prices on the page are real. Schema
-      that disagrees with the page is worse than schema that is silent.
+- [ ] `src/components/SessionsJsonLd.astro` — keep the service name, price and description in
+      step with the `SESSION` const in sessions.astro. Schema that disagrees with the page is
+      worse than schema that is silent.
 - [ ] `src/components/PersonJsonLd.astro` — pass an explicit `name` if the credited name differs
       from the brand.
 - [ ] `src/lib/photos.ts` — real per-frame alt text once the placeholders are gone.

@@ -8,7 +8,7 @@
  *
  *   pinned:      each page names its own source frame in PAGE_SOURCES below. The
  *                card is an editorial choice, not a side effect of sort order:
- *                the booking page gets a real studio headshot, the about page
+ *                the booking page gets a frame from a real session, the about page
  *                gets the photographer's own face.
  *   with photos: no pinned file on disk → the leading stream cover (date desc,
  *                then featured desc), so a renamed shoot degrades instead of failing.
@@ -45,7 +45,7 @@ const PUBLIC_DIR = resolve(ROOT, 'public');
 const MANIFEST = resolve(ROOT, 'node_modules/.cache/og-images/manifest.json');
 
 /** Bump when the composition changes, so cached outputs are invalidated. */
-const RECIPE = 6;
+const RECIPE = 7;
 
 /**
  * Per-page OG source, pinned. Repo-relative so the manifest signature is stable
@@ -53,13 +53,13 @@ const RECIPE = 6;
  * pick, so a renamed or deleted shoot degrades the card instead of the build.
  *
  *   home        the strongest frame in the book — the fashion opener.
- *   sessions    a real studio headshot: the booking page has to look like the
- *               thing being booked, not like a travel photograph.
+ *   sessions    a frame from a real on-location session, a film still: the
+ *               booking page has to look like the thing being booked.
  *   information the photographer's self-portrait, on the page that is about him.
  */
 const PAGE_SOURCES = {
   home: 'src/content/shoots/fashion-dq/001.jpg',
-  sessions: 'src/content/shoots/vp/001.jpg',
+  sessions: 'src/content/shoots/lost/001.jpg',
   information: 'src/content/shoots/prism-self-portraits/002.jpg',
   diary: 'src/content/shoots/hangzhou-nanjing/001.jpg',
 };
@@ -272,9 +272,13 @@ const escapeXml = (value) =>
     (char) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[char],
   );
 
-/** Full-bleed overlay: darkening gradient (photo variant only) + wordmark + hairline. */
+/** Full-bleed overlay: darkening gradient (photo variant only) + wordmark + hairline.
+ *  The wordmark is INK in both variants: on the photo variant the gradient below
+ *  darkens the frame towards --paper, so the mark must be the light token to read.
+ *  (It used to be PAPER here from the days when --paper was warm and light; after
+ *  the F5 redesign flipped that token dark, a regenerated card lost its wordmark.) */
 function overlaySvg(brand, { onPhoto }) {
-  const color = onPhoto ? PAPER : INK;
+  const color = INK;
   const centerY = Math.round(HEIGHT * 0.47);
   const targetWidth = Math.min(560, WIDTH - 240);
   const ruleWidth = 96;

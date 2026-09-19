@@ -1,12 +1,15 @@
 ---
 /**
- * Sessions — the working page. Owned by Agent C (SPEC.md § Sessions page).
+ * Sessions — the working page. One offer, kept deliberately simple
+ * (owner-directed, Sep 2026): the Cinematic Portrait Session. No headshot tier
+ * (no studio yet, and almost nobody who writes in wants one), no half-day, no
+ * consult track. Anything outside the session goes to email.
  *
- * Order, per spec: 1 intro · 2 track cards · 3 investment tiers · 4 booking
- * embeds (with 5 testimonials sat above each) · 6 FAQ · 7 enquiry.
+ * Order: 1 intro · 2 the session (scope + price) · 3 booking embed · 4 FAQ ·
+ * 5 enquiry.
  *
- * Stable anchors for Agent D's JSON-LD / any deep links:
- *   #consult  #book  #investment  #faq  #inquire
+ * Stable anchors for SessionsJsonLd / any deep links:
+ *   #session  #book  #faq  #inquire
  *
  * Smooth in-page scrolling comes from `html { scroll-behavior: smooth }` in
  * global.css, which already disables itself under prefers-reduced-motion.
@@ -19,168 +22,122 @@ import Faq from '../components/Faq.astro';
 import InquiryForm from '../components/InquiryForm.astro';
 import { SITE } from '../config';
 
-interface Tier {
-  name: string;
-  price: string;
-  summary: string;
-  deliverables: string[];
-}
+/* The one session. Every number a client reads lives here, and nowhere else on
+   the page; SessionsJsonLd.astro restates name, price and scope for search, so
+   edit both or neither.
 
-/* Pricing set Aug 2026 from NYC market research: bottom edge of the professional
-   band ($250+ credibility floor), each tier just under a named competitor while
-   including slightly more. Review every January; raise 10-20% once >60% of
-   inquiries book. */
-const TIERS: Tier[] = [
-  {
-    name: 'Headshot Session',
-    price: '$395',
-    summary: 'An hour, two looks, and you leave with headshots you actually like.',
-    deliverables: [
-      '60 minutes, up to two looks, studio or on-location in Manhattan/Brooklyn',
-      'Proof gallery of 30–40 selects within 24 hours',
-      '2 fully retouched finals within 72 hours, high-res + web crops',
-      'Unlimited personal and professional use, no expiration',
-      'Extra retouched image $65 · extra look $100',
-    ],
-  },
-  {
-    name: 'Portrait Session',
-    price: '$650',
-    summary: 'Three looks, two settings, and time to get past the stiff first ten minutes.',
-    deliverables: [
-      '2 hours, up to three looks, one studio setup plus one exterior location',
-      'Planning call, moodboard and shot list before the shoot',
-      'Proof gallery of 50–70 selects within 48 hours',
-      '8 fully retouched finals within 5 business days',
-      'Unlimited personal and self-promotional use',
-    ],
-  },
-  {
-    name: 'Half-Day Creative',
-    price: '$1,450',
-    summary: 'A produced shoot. We plan it like a small production because it is one.',
-    deliverables: [
-      '4 hours, up to five looks across 2–3 setups, studio and/or location',
-      'Full pre-production: concept call, moodboard, shot list, scouting',
-      'Proof gallery of 100–150 selects within 3 days; 20 retouched finals in 10',
-      'One-year usage on owned and organic channels; paid media quoted separately',
-      'Studio rental and permits billed at cost',
-    ],
-  },
-];
-
+   Price set Aug 2026 from NYC market research (bottom edge of the professional
+   band); review every January, raise 10-20% once more than 60% of inquiries
+   book. Gallery and retouch counts mirror how Selects galleries actually run:
+   every frame edited and downloadable, three favorites marked for full
+   retouching. No shot list: the planning call and moodboard are the prep. */
+const SESSION = {
+  name: 'Cinematic Portrait Session',
+  price: '$650',
+  length: '2 hours',
+  deposit: '$150',
+  summary: 'Portraits that look like stills from a film. Real locations, real light, no studio.',
+  includes: [
+    '2 hours, up to 3 looks, 2 locations',
+    'Planning call and moodboard before the shoot',
+    '25–40 edited HDR frames in a private online gallery, within a week',
+    '3 fully retouched favorites, your pick, within 5 business days',
+    'Full-resolution downloads plus Instagram and RedNote sizes',
+    'Unlimited personal use, no expiration',
+  ],
+  extras: 'Add a retouched frame: $65',
+};
 ---
 
 <BaseLayout>
   <Seo
     slot="head"
     title="Sessions"
-    description="Book a photography session in New York: creative portraiture projects and standard headshot sessions."
+    description="Cinematic portrait session in New York: two hours on location, 25–40 edited HDR frames, three fully retouched. $650, booked online."
     ogImage="/og/sessions.jpg"
   />
   <SessionsJsonLd slot="head" />
+
   {/* 1. Intro ------------------------------------------------------------ */}
   <div class="column">
     <h1>Sessions</h1>
     <p class="lede">
-      Two ways to work together: a custom creative project, or a standard session you can book
-      directly.
+      Film-still portraits of you, anywhere in New York. Two hours, 25–40 finished HDR frames,
+      three fully retouched. {SESSION.price}, booked online.
     </p>
   </div>
 
-  {/* 2. Track cards ------------------------------------------------------ */}
-  <div class="column-wide section">
-    <h2 class="visually-hidden">Ways to work together</h2>
-    <div class="tracks">
-      <article class="card track">
-        <span class="eyebrow">Creative portraiture</span>
-        <h3 class="track__name">Start a project</h3>
-        <p class="track__pitch">
-          Concept portraiture built around an idea. We plan location, styling and light together
-          before anyone picks up a camera. Editorial, album art, personal work that should
-          look like yours and nobody else&rsquo;s.
-        </p>
-        <p class="track__note">Custom projects start with a conversation.</p>
-        <a class="button" href="#consult">Book a consult</a>
-      </article>
+  {/* 2. The session ------------------------------------------------------ */}
+  <section class="column-wide section" id="session" aria-labelledby="session-heading">
+    <article class="card offer">
+      <div class="offer__head">
+        <div class="offer__title">
+          <span class="eyebrow">The session</span>
+          <h2 id="session-heading" class="offer__name">{SESSION.name}</h2>
+          <p class="offer__summary">{SESSION.summary}</p>
+        </div>
 
-      <article class="card track">
-        <span class="eyebrow">Headshots &amp; standard sessions</span>
-        <h3 class="track__name">Book now</h3>
-        <p class="track__pitch">
-          Fixed scope, fixed price, on the calendar in about two minutes. Headshots, portraits and
-          straightforward personal sessions where you already know what you need.
-        </p>
-        <p class="track__note">Pick a time that works.</p>
+        {/* Numbers and hard data are always grotesque. */}
+        <dl class="offer__facts">
+          <div class="offer__fact offer__fact--price">
+            <dt>Price</dt>
+            <dd>{SESSION.price}</dd>
+          </div>
+          <div class="offer__fact">
+            <dt>Length</dt>
+            <dd>{SESSION.length}</dd>
+          </div>
+          <div class="offer__fact">
+            <dt>Deposit</dt>
+            <dd>{SESSION.deposit}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="offer__body">
+        <div class="offer__pitch">
+          <p>
+            You leave with 25&ndash;40 finished frames, mastered in HDR so they look lit from
+            within on a modern phone. Three of them fully retouched, your pick.
+          </p>
+          <p>
+            Night streets, a subway window, your kitchen at golden hour. We build the scene
+            around you. The city is the set.
+          </p>
+        </div>
+
+        <div class="offer__includes">
+          <h3 class="label label--ink">What you get</h3>
+          <ul class="offer__list" role="list">
+            {SESSION.includes.map((item) => <li>{item}</li>)}
+          </ul>
+          <p class="offer__extras">{SESSION.extras}</p>
+        </div>
+      </div>
+
+      <div class="offer__actions">
         <a class="button" href="#book">See open times</a>
-      </article>
-    </div>
-  </div>
-
-  {/* 3. Investment ------------------------------------------------------- */}
-  <section class="column-wide section section--ruled" id="investment" aria-labelledby="investment-heading">
-    <span class="eyebrow">Investment</span>
-    <h2 id="investment-heading">What sessions cost</h2>
-
-    <div class="tiers">
-      {
-        TIERS.map((tier) => (
-          <article class="card tier">
-            <h3 class="tier__name">{tier.name}</h3>
-            <p class="tier__price">Starting at {tier.price}</p>
-            <p class="tier__summary">{tier.summary}</p>
-            <ul class="tier__list" role="list">
-              {tier.deliverables.map((item) => (
-                <li>{item}</li>
-              ))}
-            </ul>
-          </article>
-        ))
-      }
-    </div>
-
-    <p class="tiers__footnote">
-      Editorial and concept work gets a custom quote after a consult. Creative fees start at
-      $2,000 a day, with usage and production scoped separately.
-    </p>
+        <span class="offer__note">Flat price. No packages.</span>
+      </div>
+    </article>
   </section>
 
   {/*
-   * 4 + 5. Booking. Testimonial slots are OFF the page until real quotes exist
+   * 3. Booking. Testimonial slots are OFF the page until real quotes exist
    * (ask GL and VP) — visible placeholder praise reads as broken, not humble.
    * When they land: <Testimonial name="…" role="…">quote</Testimonial> above
-   * each CalEmbed, component is ready in src/components/Testimonial.astro.
+   * the CalEmbed, component is ready in src/components/Testimonial.astro.
    */}
   <div class="column-wide section section--ruled">
-    <CalEmbed
-      id="consult"
-      eyebrow="Creative portraiture"
-      heading="Free 20-minute consult"
-      calLink={SITE.calConsult}
-    >
+    <CalEmbed id="book" eyebrow="Booking" heading="Pick a date" calLink={SITE.calSession}>
       <p>
-        No pitch. We talk through the idea, the people, the location and the budget, and I tell you
-        straight whether I&rsquo;m the right photographer for it.
+        Pick a slot and it&rsquo;s yours. {SESSION.deposit} deposit at booking, off the total.
+        Balance due on the day. Questions first? <a href="#inquire">Email me</a>.
       </p>
     </CalEmbed>
   </div>
 
-  <div class="column-wide section">
-    <CalEmbed
-      id="book"
-      eyebrow={'Headshots & standard sessions'}
-      heading="Book a session"
-      calLink={SITE.calHeadshots}
-    >
-      <p>
-        Pick a slot and it&rsquo;s yours. A $150 deposit reserves the date and comes off your
-        session total; the balance is due on the day of the shoot. Half-day and custom projects
-        book with a 50% deposit instead.
-      </p>
-    </CalEmbed>
-  </div>
-
-  {/* 6. FAQ -------------------------------------------------------------- */}
+  {/* 4. FAQ -------------------------------------------------------------- */}
   <section class="column section section--ruled" id="faq" aria-labelledby="faq-heading">
     <span class="eyebrow">Questions</span>
     <h2 id="faq-heading">Before you book</h2>
@@ -188,174 +145,159 @@ const TIERS: Tier[] = [
     <div class="faqs">
       <Faq q="How long until I get my photos?">
         <p>
-          Headshots come back within a week. Portrait sessions take about two, and half-day
-          projects up to three. Either way, a small preview reaches you inside 48 hours so you
-          have something to use right away. On a deadline? Tell me before you book and I&rsquo;ll
-          see what the calendar allows.
+          Gallery within a week. Retouched favorites within five business days of your picks.
+          On a deadline? Say so before you book.
         </p>
       </Faq>
 
       <Faq q="What am I allowed to do with the images?">
         <p>
-          Print them, post them, put them on your website. Personal use is all included. If the
-          images are going to sell something (ads, packaging, paid campaigns), that&rsquo;s a
-          commercial license and I quote it per project.
+          Print them, post them, put them on your site. Personal use is included. Ads,
+          packaging or paid campaigns need a commercial license, quoted per project.
         </p>
         <p>
-          I keep the copyright and the right to show the work in my portfolio. Want a shoot kept
-          private? Tell me before we shoot and we&rsquo;ll put it in writing.
+          I keep the copyright and portfolio rights. Want the shoot kept private? Say so before
+          we shoot and it goes in writing.
         </p>
       </Faq>
 
-      <Faq q="Do you travel?">
+      <Faq q="Where do we shoot?">
         <p>
-          I&rsquo;m based in New York, and anywhere in the five boroughs is included. Past about an
-          hour out I add a travel fee. Multi-day and out-of-state work gets quoted with travel and
-          lodging built in. I like location work, so if you have somewhere in mind, bring it to
-          the consult.
+          Anywhere in the five boroughs, included. I keep a shortlist of places that photograph
+          like a set, or bring your own. More than an hour outside the city adds a travel fee.
         </p>
       </Faq>
 
       <Faq q="What happens if the weather turns?">
         <p>
-          Overcast is actually good news: soft light, no squinting. We only move the shoot when
-          the weather makes the work impossible, think heavy rain or lightning. I make that call
-          with you the morning of, and we pick the next date that works for both of us. No fee.
+          Overcast is good light. We only move for heavy rain or lightning, decided together
+          the morning of. No fee.
         </p>
       </Faq>
 
       <Faq q="Can I reschedule or cancel?">
         <p>
-          Your date is held by a $150 deposit that comes off your session total; bigger projects
-          book at half the total instead. Plans change: reschedule free with 48 hours notice, and
-          cancellations a week or more out get a full refund. Inside a week, the deposit stays as
-          credit toward a new date.
+          Reschedule free with 48 hours notice. Cancel a week or more out for a full refund.
+          Inside a week, the {SESSION.deposit} deposit becomes credit toward a new date.
         </p>
         <p>
-          Same-day cancellations and no-shows forfeit the deposit. If I ever have to cancel, you
-          get a full refund or a free reschedule, your pick. And weather never counts against you.
+          Same-day cancellations and no-shows forfeit the deposit. If I cancel, you get a full
+          refund or a free reschedule, your pick. Weather never counts against you.
         </p>
       </Faq>
 
       <Faq q="What should I wear?">
         <p>
-          Solid colors and simple shapes photograph best. The two most common regrets are busy
-          patterns and a haircut from the day before. Bring two or three options on hangers and
-          we&rsquo;ll pick together. The full prep list comes with your booking confirmation.
+          Solid colors, simple shapes. Skip busy patterns and the day-before haircut. Bring three
+          outfits on hangers and we pick together. The full prep list comes with your booking
+          confirmation.
         </p>
       </Faq>
     </div>
   </section>
 
-  {/* 8. Enquiry ---------------------------------------------------------- */}
+  {/* 5. Enquiry ---------------------------------------------------------- */}
   <section class="column section section--ruled" id="inquire" aria-labelledby="inquire-heading">
     <span class="eyebrow">Inquiries</span>
     <h2 id="inquire-heading">Something else in mind?</h2>
     <p class="muted">
-      Editorial commissions, unusual locations, anything that doesn&rsquo;t fit a tier. Tell me
-      about it and I&rsquo;ll come back with a plan and a number.
+      Groups, editorial, a location that needs a permit: email me and I&rsquo;ll tell you
+      straight whether I can do it.
     </p>
     <InquiryForm />
   </section>
 </BaseLayout>
 
 <style>
-  /* --- 2. Track cards ---------------------------------------------------- */
+  /* --- 2. The session ---------------------------------------------------- */
 
-  .tracks {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-5);
-  }
-
-  .track {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+  .offer {
     padding: var(--space-6);
   }
 
-  .track__name {
-    font-size: 1.32rem;
+  .offer__head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
   }
 
-  .track__pitch {
+  .offer__name {
+    font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.2rem);
+  }
+
+  .offer__summary {
     margin-top: var(--space-4);
     color: var(--ink-soft);
   }
 
-  .track__note {
-    margin-top: var(--space-4);
-    margin-bottom: var(--space-5);
+  /* Price, length, deposit: three mono facts on a hairline. */
+  .offer__facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+    margin: 0;
+    padding-left: var(--space-5);
+    border-left: 1px solid var(--line);
+  }
+
+  .offer__fact dt {
     font-family: var(--grotesque);
-    font-size: 0.74rem;
+    font-size: 0.7rem;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: var(--tracking-label);
     color: var(--ink-faint);
   }
 
-  /* Push the button to the bottom so both cards align regardless of copy. */
-  .track .button {
-    margin-top: auto;
-  }
-
-  /* --- 3. Tier cards ----------------------------------------------------- */
-
-  .tiers {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-5);
-    margin-top: var(--space-6);
-  }
-
-  .tier {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .tier__name {
-    font-family: var(--serif);
-    font-size: 1.24rem;
-  }
-
-  /* Numbers and hard data are always grotesque. */
-  .tier__price {
-    margin-top: var(--space-2);
+  .offer__fact dd {
+    margin: var(--space-2) 0 0;
     font-family: var(--grotesque);
-    font-size: 0.78rem;
+    font-size: 1.45rem;
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-label);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .offer__fact--price dd {
     color: var(--accent);
   }
 
-  .tier__summary {
-    margin-top: var(--space-4);
-    font-size: 0.98rem;
+  .offer__body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6);
+    margin-top: var(--space-6);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--line);
+  }
+
+  .offer__pitch {
     color: var(--ink-soft);
   }
 
-  .tier__list {
+  .offer__list {
     list-style: none;
-    margin: var(--space-5) 0 0;
-    padding: var(--space-4) 0 0;
-    border-top: 1px solid var(--line);
+    margin: var(--space-4) 0 0;
+    padding: 0;
     font-family: var(--grotesque);
     font-size: 0.8rem;
     line-height: 1.55;
     color: var(--ink-soft);
   }
 
-  .tier__list li + li {
+  .offer__list li + li {
     margin-top: var(--space-3);
   }
 
-  .tier__list li {
-    padding-left: var(--space-4);
+  .offer__list li {
     position: relative;
+    padding-left: var(--space-4);
   }
 
-  .tier__list li::before {
+  .offer__list li::before {
     content: '';
     position: absolute;
     left: 0;
@@ -365,34 +307,61 @@ const TIERS: Tier[] = [
     background-color: var(--ink-faint);
   }
 
-  .tiers__footnote {
-    margin-top: var(--space-5);
-    color: var(--ink-soft);
+  .offer__extras,
+  .offer__note {
+    font-family: var(--grotesque);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
   }
 
-  /* --- 6. FAQ ------------------------------------------------------------ */
+  .offer__extras {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line);
+  }
+
+  .offer__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+  }
+
+  /* --- 4. FAQ ------------------------------------------------------------ */
 
   .faqs {
     margin-top: var(--space-5);
   }
 
-
   /* --- responsive -------------------------------------------------------- */
 
   @media (max-width: 880px) {
-    .tiers {
+    .offer__head,
+    .offer__body {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .offer__facts {
+      padding-left: 0;
+      padding-top: var(--space-5);
+      border-left: 0;
+      border-top: 1px solid var(--line);
     }
   }
 
   @media (max-width: 640px) {
-    .tracks {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .track {
+    .offer {
       padding: var(--space-5);
     }
-  }
 
+    .offer__facts {
+      gap: var(--space-3);
+    }
+
+    .offer__fact dd {
+      font-size: 1.2rem;
+    }
+  }
 </style>

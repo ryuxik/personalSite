@@ -7,7 +7,7 @@ landscape, stack comparison). This file is the contract.
 ## What this is
 
 A photography portfolio + booking site for Ryu (github: ryuxik), strongest in creative portraiture,
-replacing a dead 2018 Angular app. Editorial presentation in front, service-tier booking one level
+replacing a dead 2018 Angular app. Editorial presentation in front, one bookable session one level
 down. Static Astro 7 site deployed to Cloudflare Pages. Running cost target: $0/mo.
 
 ## Hard rules
@@ -93,8 +93,7 @@ export const SITE = {
   email: "hello@ryuxik.io",              // TODO(ryu): confirm address
   instagram: "https://instagram.com/ryuxik",  // TODO(ryu): confirm handle
   city: "",                              // TODO(ryu): city served — needed for ProfessionalService JSON-LD
-  calConsult: "ryuxik/intro-call",       // TODO(ryu): create on cal.com
-  calHeadshots: "ryuxik/headshots",      // TODO(ryu): create on cal.com, attach Stripe retainer
+  calSession: "ryuxik/cinematic-portrait", // TODO(ryu): create on cal.com, attach the $150 Stripe deposit
   formEndpoint: "",                      // TODO(ryu): e.g. Formspree URL; empty = form hidden, email shown
 };
 ```
@@ -324,30 +323,28 @@ with `TODO(ryu): replace with real work` in the body.
 
 ## Sessions page (owned by Agent C)
 
+One offer only (owner-directed, Sep 2026): the **Cinematic Portrait Session**. No headshot tier
+(no studio yet, and almost nobody who writes in wants one), no half-day, no consult track. Anything
+outside the session goes to email.
+
 Order top→bottom:
-1. One-line intro (serif, quiet).
-2. Two track cards side by side (stack on mobile):
-   - "Creative portraiture — Start a project": short pitch, "Custom projects — let's talk",
-     button scrolls to consult embed.
-   - "Headshots & standard sessions — Book now": pitch, button scrolls to booking embed.
-3. Investment: 3 tier cards (grotesque data, serif names). Names/prices are placeholders:
-   e.g. Headshot Session / Portrait Session / Half-day — each "starting at $TODO", 3-4 bullet
-   deliverables, turnaround. Visible `TODO(ryu)` in copy is fine at this stage. Below tiers, one
-   line: custom/editorial work is quoted after a consult.
-4. Booking: two `<CalEmbed>` sections with headings — free 20-min consult (calConsult) and
-   self-serve session (calHeadshots). CalEmbed.astro: container div + official Cal inline embed
-   snippet, injected only when scrolled near (IntersectionObserver), `data-cal-link` from config.
-   Until Cal loads (or if it fails), the container shows a styled fallback: "Email {email} and
-   I'll reply within 24h." Never a blank box.
-5. Testimonials: 2 `<blockquote>` slots directly beside/above the booking CTAs — placeholder
-   text clearly marked `TODO(ryu): real quote, name, role, photo`.
-6. FAQ: 6 `<details>`/`<summary>` items (turnaround, usage rights, travel, weather, rescheduling,
-   what to wear pointer). Write real, sensible default answers; retainer language:
-   "non-refundable retainer" + 48-hour reschedule window.
-7. Prep guide: short "Before your session" list.
-8. Inquiry form (only if formEndpoint set, else a mailto block): exactly 5 fields — name, email,
+1. One-line intro (quiet).
+2. The session: one wide card. Name, one-line summary, three mono facts (price, length, deposit),
+   a short pitch (on location, film-still framing, no studio, HDR), a "What you get" list
+   (hours/looks, planning call, private HDR gallery, three retouched favorites, social sizes,
+   usage), one add-on line, one button that scrolls to the booking embed. Every number lives in
+   the `SESSION` const at the top of sessions.astro and is restated in SessionsJsonLd.astro.
+3. Booking: one `<CalEmbed>` (calSession) with the deposit line. CalEmbed.astro: container div +
+   official Cal inline embed snippet, injected only when scrolled near (IntersectionObserver),
+   `data-cal-link` from config. Until Cal loads (or if it fails), the container shows a styled
+   fallback: "Email {email} and I'll reply within 24h." Never a blank box.
+4. Testimonials: off the page until real quotes exist (Testimonial.astro is ready).
+5. FAQ: 6 `<details>`/`<summary>` items (turnaround, usage rights, where we shoot + travel,
+   weather, rescheduling, what to wear). Deposit language: $150 comes off the total, free
+   reschedule with 48 hours notice, full refund a week or more out.
+6. Inquiry form (only if formEndpoint set, else a mailto block): exactly 5 fields — name, email,
    session type (select), date window (text), message. POST to formEndpoint. Honeypot field.
-   Styled to tokens. Below it: "I reply within 24 hours." — TODO(ryu) confirm window.
+   Styled to tokens. Below it: "I reply within 24 hours."
 
 ## Information page + SEO (owned by Agent D)
 
