@@ -124,6 +124,11 @@ const portraitStyle = portrait
         </a>
       </p>
     </section>
+
+    {/* The disclosure for src/scripts/track.ts (SPEC.md § Site analytics). */}
+    <p class="privacy-note">
+      This site counts its own visits and clicks. No cookies, no ad trackers, nothing sold or shared.
+    </p>
   </div>
 </BaseLayout>
 
@@ -227,6 +232,12 @@ const portraitStyle = portrait
   .contact__social a:hover {
     color: var(--accent);
     border-bottom-color: var(--accent);
+  }
+
+  .privacy-note {
+    margin-top: var(--space-6);
+    color: var(--ink-faint);
+    font-size: 0.8125rem;
   }
 
   .contact__handle {

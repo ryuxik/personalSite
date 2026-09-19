@@ -79,6 +79,12 @@ declare module 'cloudflare:email' {
   }
 }
 
+/** Workers Rate Limiting binding — the key (an IP here) is counted at the
+ * edge and never reaches our storage. */
+interface RateLimit {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 interface Fetcher {
   fetch(request: Request | string): Promise<Response>;
 }
@@ -96,6 +102,8 @@ interface Env {
   ASSETS: Fetcher;
   MEDIA: R2Bucket;
   DB: D1Database;
+  /** Per-IP limiter for the public /api/e beacon. Absent = unlimited (local dev). */
+  TRACK_LIMIT?: RateLimit;
   /** Secret — bearer for /api/admin/* and the ingest CLI. Unset = admin disabled. */
   SELECTS_ADMIN_TOKEN?: string;
   /** Email Routing send_email binding (preferred path). Absent until the

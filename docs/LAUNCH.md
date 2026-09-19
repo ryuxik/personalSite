@@ -432,3 +432,18 @@ surface: `npm run gallery:dev` (+ `.dev.vars` with SELECTS_ADMIN_TOKEN), ingest 
 `--api http://127.0.0.1:8787`. Polish round: re-export the marked stems, re-run
 ingest with `--replace`. Verify HDR end to end after ANY pipeline change:
 `node scripts/check-hdr.mjs` on a downloaded ladder rung must say PRESENT.
+
+## Site analytics — first-party funnel
+
+Nothing to provision: the D1 tables create themselves on first use and the rate-limit binding
+ships in `wrangler.jsonc`. After a deploy:
+
+1. Open `https://ryuxik.io/?s=me` once in **every browser you use** (phone, in-app IG/RedNote
+   browsers included) so your own visits stay out of the numbers. Loading `/admin` does the same.
+2. Tag every link you hand out: bio links `ryuxik.io/?s=ig` and `ryuxik.io/?s=xhs`; one-offs like
+   `?s=ig-story`. Untagged in-app traffic is still guessed from the user agent, but a tag is exact.
+3. Read `/admin/insights`. "Calendar health" must show loads, not failures — a `failed:404`
+   there means the Cal.com event slug in `src/config.ts` does not exist (§ 1 above).
+4. Optional cross-check: paste a Cloudflare Web Analytics token into `analyticsToken`
+   (`src/config.ts`) for bot-filtered visit counts and Core Web Vitals.
+

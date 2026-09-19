@@ -8,7 +8,7 @@ export const SITE = {
   email: "ryuxik@gmail.com",
   instagram: "https://www.instagram.com/santi7ago/",
   city: "New York, NY",
-  calSession: "ryuxik/cinematic-portrait", // TODO(ryu): create on cal.com, attach the $150 Stripe deposit
+  calSession: "ryuxik/cinematic-portrait", // live on cal.com since 2026-09-18, $150 Stripe deposit attached
   formEndpoint: "",                      // TODO(ryu): e.g. Formspree URL; empty = form hidden, email shown
   // Cloudflare Web Analytics site token. Empty = no beacon is emitted at all.
   // TODO(ryu): paste the token from Cloudflare dashboard → Web Analytics → Add a site.

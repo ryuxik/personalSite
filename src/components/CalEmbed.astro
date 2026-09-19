@@ -58,6 +58,17 @@ const initScript = `
 
   var NS = ${JSON.stringify(namespace)};
   var started = false;
+  var bootedAt = 0;
+  var reported = {};
+
+  /* Funnel signals (SPEC.md § Site analytics) go through the tracker's queue,
+     which exists whether or not src/scripts/track.ts has run yet. Each label
+     reports once: the calendar's state, never anything a visitor typed. */
+  function fx(detail, value) {
+    if (reported[detail]) return;
+    reported[detail] = true;
+    try { (window.fxq = window.fxq || []).push(['cal', detail, value]); } catch (err) {}
+  }
 
   function mounted() {
     return !!mount.firstElementChild;
@@ -66,7 +77,9 @@ const initScript = `
   function boot() {
     if (started) return;
     started = true;
+    bootedAt = Date.now();
     box.setAttribute('data-cal-state', 'loading');
+    fx('loading');
 
     /* Cal.com's official inline-embed loader, verbatim. Running it more than
        once per page is safe by design: it keeps the first window.Cal and the
@@ -93,8 +106,18 @@ const initScript = `
       });
     } catch (err) {
       box.setAttribute('data-cal-state', 'failed');
+      fx('failed:init');
       return;
     }
+
+    /* What the visitor does inside the iframe, as far as Cal tells the parent
+       page. Only the step is recorded — never the event payload, which can
+       carry the booker's name and email. */
+    try {
+      Cal.ns[NS]("on", { action: "__routeChanged", callback: function () { fx('step:route'); } });
+      Cal.ns[NS]("on", { action: "bookingSuccessful", callback: function () { fx('booked'); } });
+      Cal.ns[NS]("on", { action: "bookingSuccessfulV2", callback: function () { fx('booked'); } });
+    } catch (err) {}
 
     /* Measured Cal behaviour, not guesswork:
          success · <cal-inline> mounts in ~150ms and never carries a loading
@@ -123,11 +146,14 @@ const initScript = `
         failed = true;
         stopWatching();
         box.setAttribute('data-cal-state', 'failed');
+        var bad = mount.querySelector('[data-error-code]');
+        fx('failed:' + ((bad && bad.getAttribute('data-error-code')) || 'error'));
         return;
       }
       if (!mounted()) return;
       window.clearTimeout(noMountTimer);
       box.setAttribute('data-cal-state', 'ready');
+      fx('ready', Date.now() - bootedAt);
     }
 
     if ('MutationObserver' in window) {
@@ -148,6 +174,7 @@ const initScript = `
       if (mounted()) return;
       stopWatching();
       box.setAttribute('data-cal-state', 'failed');
+      fx('failed:no-mount');
     }, 15000);
 
     evaluate();
@@ -172,7 +199,7 @@ const initScript = `
 `;
 ---
 
-<section class="cal-section" id={id} aria-labelledby={headingId}>
+<section class="cal-section" id={id} aria-labelledby={headingId} data-ev-view={id}>
   {eyebrow && <span class="eyebrow">{eyebrow}</span>}
   <h2 id={headingId}>{heading}</h2>
 
@@ -192,7 +219,7 @@ const initScript = `
       <p class="cal__note cal__note--failed">
         The scheduler didn&rsquo;t load. Email works just as well.
       </p>
-      <a class="button button--quiet" href={calPageUrl} rel="noopener noreferrer" target="_blank">
+      <a class="button button--quiet" href={calPageUrl} rel="noopener noreferrer" target="_blank" data-ev="cal-page">
         Open booking page
       </a>
     </div>

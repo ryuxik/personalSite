@@ -22,6 +22,11 @@ const api = (path, opts = {}) =>
     return data;
   });
 
+/* Only the photographer ever loads this file (Cloudflare Access), so loading
+ * it marks this browser's visits to the public site as internal — they stay
+ * out of the funnel (SPEC.md § Site analytics; src/scripts/track.ts reads it). */
+try { localStorage.setItem('fx_internal', '1'); } catch { /* storage blocked */ }
+
 /* ---- byte helpers (mirror worker/lib/bytes.ts) -------------------------- */
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -80,7 +85,7 @@ if (view === 'home') {
     }
     location.href = `/admin/g/${r.gallery.id}`;
   });
-} else {
+} else if (view === 'gallery') {
 
 /* ---------------------------------------------------------- gallery */
 const id = $('.admin').dataset.id;
@@ -696,4 +701,164 @@ async function runIngest(g, serverPhotos, files, status) {
 }
 
 load().catch((e) => ($('#matrix-body').textContent = `Failed to load: ${e.message}`));
+}
+
+
+/* ================= insights: the public site's funnel ================= */
+if (view === 'insights') {
+  const state = { days: 30, source: '', device: '', internal: false, bounces: false };
+  const pct = (n, of) => (of > 0 ? Math.round((n / of) * 100) + '%' : '—');
+  const dur = (ms) => {
+    const s = Math.round(ms / 1000);
+    return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s`;
+  };
+  // D1 datetimes are UTC without a zone marker.
+  const when = (utc) =>
+    new Date(utc.replace(' ', 'T') + 'Z').toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+  const paintFilters = (data) => {
+    const opt = (value, label, current) => `<option value="${escAttr(value)}"${value === current ? ' selected' : ''}>${esc(label)}</option>`;
+    $('#ins-filters-body').innerHTML = `
+      <div class="ins-filters">
+        <label>Range <select name="days">${[7, 30, 90, 365].map((d) => opt(String(d), `${d} days`, String(state.days))).join('')}</select></label>
+        <label>Source <select name="source">${opt('', 'all', state.source)}${data.filters.sources.map((x) => opt(x, x, state.source)).join('')}</select></label>
+        <label>Device <select name="device">${['', 'mobile', 'tablet', 'desktop'].map((d) => opt(d, d || 'all', state.device)).join('')}</select></label>
+        <label class="ins-check"><input type="checkbox" name="bounces"${state.bounces ? ' checked' : ''}> show bounces</label>
+        <label class="ins-check"><input type="checkbox" name="internal"${state.internal ? ' checked' : ''}> my own visits</label>
+      </div>`;
+    $('#ins-filters-body').onchange = (event) => {
+      const el = event.target;
+      if (el.name === 'days') state.days = Number(el.value);
+      else if (el.type === 'checkbox') state[el.name] = el.checked;
+      else state[el.name] = el.value;
+      load();
+    };
+  };
+
+  const paintFunnel = (data) => {
+    const top = data.funnel[0].n;
+    const engaged = data.funnel[1].n;
+    if (top === 0) {
+      $('#ins-funnel').innerHTML = '<p class="muted">No sessions in this range yet. Visit the site from another browser (or tick “my own visits”) to see data arrive.</p>';
+      return;
+    }
+    $('#ins-funnel').innerHTML = `<div class="table-scroll"><table class="matrix ins-funnel">
+      <tr><th>Step</th><th>Sessions</th><th></th><th>of previous</th><th>of engaged</th><th>prior ${data.days}d</th></tr>
+      ${data.funnel.map((step, i) => {
+        const prev = i === 0 ? null : data.funnel[i - 1].n;
+        const before = data.prior[i].n;
+        const delta = step.n - before;
+        return `<tr>
+          <td>${esc(step.label)}</td>
+          <td><b>${step.n}</b></td>
+          <td class="ins-bar"><span style="width:${top ? Math.max((step.n / top) * 100, step.n ? 1.5 : 0) : 0}%"></span></td>
+          <td>${prev === null ? '' : pct(step.n, prev)}</td>
+          <td>${i < 2 ? '' : pct(step.n, engaged)}</td>
+          <td class="${delta > 0 ? 'ok' : delta < 0 ? 'miss' : ''}">${before}${delta ? ` (${delta > 0 ? '+' : ''}${delta})` : ''}</td>
+        </tr>`;
+      }).join('')}
+    </table></div>
+    <p class="muted">Engaged = a real tap, key or wheel event; everything below it counts engaged sessions only. Each step means “got at least this far”.</p>`;
+  };
+
+  const story = (s) => {
+    const bits = [];
+    if (s.n_shoots) bits.push(`${s.n_shoots} shoot${s.n_shoots === 1 ? '' : 's'}`);
+    if (s.f_sessions) bits.push('/sessions');
+    if (s.f_offer) bits.push('offer');
+    if (s.f_book) bits.push('booking');
+    if (s.f_cal_failed) bits.push('<span class="miss">cal failed</span>');
+    else if (s.f_cal_ready) bits.push('cal ready');
+    if (s.f_cal_used) bits.push('used cal');
+    if (s.f_booked) bits.push('<span class="ok">booked</span>');
+    if (s.f_mailto) bits.push('<span class="mark">emailed</span>');
+    return bits.join(' → ') || (s.human ? 'looked, left' : 'bounce');
+  };
+
+  const paintJournal = (data) => {
+    const rows = data.sessions.filter((s) => state.bounces || s.human);
+    if (rows.length === 0) {
+      $('#ins-journal').innerHTML = '<p class="muted">No engaged sessions in this range.</p>';
+      return;
+    }
+    $('#ins-journal').innerHTML = `<ul class="thread ins-journal">${rows.map((s) => `
+      <li data-sid="${escAttr(s.sid)}"${s.human ? '' : ' class="resolved"'}>
+        <button class="ins-line" type="button">
+          <span class="who">${esc(when(s.started_at))} · <span class="stem">${esc(s.source)}</span>${s.visit_n > 1 ? ` · visit ${s.visit_n}${s.first_source && s.first_source !== s.source ? ` (first: ${esc(s.first_source)})` : ''}` : ''} · ${esc(s.device)} ${esc(s.browser)}${s.country ? ' · ' + esc(s.country) : ''} · ${dur(s.dur_ms)}</span>
+          <span class="ins-story">${esc(s.landing_path)} → ${story(s)}</span>
+        </button>
+        <div class="ins-timeline" hidden></div>
+      </li>`).join('')}</ul>`;
+    $('#ins-journal').onclick = async (event) => {
+      const li = event.target.closest('li[data-sid]');
+      if (!li || !event.target.closest('.ins-line')) return;
+      const box = $('.ins-timeline', li);
+      box.hidden = !box.hidden;
+      if (box.hidden || box.dataset.loaded) return;
+      box.dataset.loaded = '1';
+      box.textContent = 'Loading…';
+      try {
+        const { events } = await api(`insights/${li.dataset.sid}`);
+        box.innerHTML = `<table class="matrix">${events.map((e) => `<tr>
+          <td>${dur(e.t_ms)}</td><td>${esc(e.path)}</td><td><b>${esc(e.name)}</b></td>
+          <td>${esc(e.detail)}</td><td>${e.v === null ? '' : esc(String(Math.round(e.v)))}</td></tr>`).join('')}</table>`;
+      } catch (error) {
+        box.textContent = `Could not load: ${error.message}`;
+      }
+    };
+  };
+
+  const paintSources = (data) => {
+    $('#ins-sources').innerHTML = data.sources.length === 0 ? '<p class="muted">—</p>' : `<div class="table-scroll"><table class="matrix">
+      <tr><th>Source</th><th>Landed</th><th>Engaged</th><th>/sessions</th><th>Booking</th><th>Used cal</th><th>Booked</th></tr>
+      ${data.sources.map((r) => `<tr><td class="mark">${esc(r.source)}</td><td>${r.landed}</td><td>${r.engaged} <span class="muted">${pct(r.engaged, r.landed)}</span></td>
+        <td>${r.sessions} <span class="muted">${pct(r.sessions, r.engaged)}</span></td><td>${r.book}</td><td>${r.cal_used}</td><td>${r.booked}</td></tr>`).join('')}
+    </table></div>
+    <p class="muted">Tag your links: <b>ryuxik.io/?s=ig</b>, <b>?s=xhs</b>, <b>?s=ig-story</b>. The tag is read once and removed from the address bar.</p>`;
+  };
+
+  const paintEnds = (data) => {
+    $('#ins-ends').innerHTML = data.ends.length === 0 ? '<p class="muted">—</p>' : `<table class="matrix">
+      <tr><th>Last page</th><th>Last thing seen</th><th>Sessions</th></tr>
+      ${data.ends.map((r) => `<tr><td>${esc(r.path)}</td><td>${esc(r.section || 'top of page')}</td><td>${r.n}</td></tr>`).join('')}
+    </table><p class="muted">Engaged sessions that did not book, by where they came to rest.</p>`;
+  };
+
+  const paintCal = (data) => {
+    const failed = data.cal.failed;
+    $('#ins-cal').innerHTML = `<p>${data.cal.ready} loaded${data.cal.median_ms === null ? '' : ` · median ${(data.cal.median_ms / 1000).toFixed(1)}s`} ·
+      <span class="${failed.length ? 'miss' : 'ok'}">${failed.length} failed</span></p>
+      ${failed.length ? `<table class="matrix"><tr><th>Browser</th><th>Device</th><th>Country</th></tr>${failed.map((f) => `<tr><td>${esc(f.browser)}</td><td>${esc(f.device)}</td><td>${esc(f.country)}</td></tr>`).join('')}</table>` : ''}`;
+  };
+
+  const paintReach = (data) => {
+    const groups = [
+      ['FAQ opened', (r) => r.name === 'faq'],
+      ['Shoots seen (home)', (r) => r.name === 'view' && r.detail.startsWith('shoot:')],
+      ['Clicks', (r) => r.name === 'click'],
+      ['Scroll depth', (r) => r.name === 'scroll'],
+    ];
+    $('#ins-reach').innerHTML = `<div class="ins-grid">${groups.map(([title, test]) => {
+      const rows = data.reach.filter(test).slice(0, 14);
+      return `<div><h3 class="ins-h3">${title}</h3>${rows.length === 0 ? '<p class="muted">—</p>' : `<table class="matrix">${rows.map((r) =>
+        `<tr><td>${esc(r.detail.replace(/^shoot:/, ''))}${r.name === 'scroll' ? '%' : ''} <span class="muted">${esc(r.path)}</span></td><td>${r.n}</td></tr>`).join('')}</table>`}</div>`;
+    }).join('')}</div><p class="muted">Engaged sessions that did each thing at least once.</p>`;
+  };
+
+  const load = async () => {
+    const query = new URLSearchParams({ days: String(state.days), source: state.source, device: state.device, internal: state.internal ? '1' : '0' });
+    try {
+      const data = await api(`insights?${query}`);
+      paintFilters(data);
+      paintFunnel(data);
+      paintJournal(data);
+      paintSources(data);
+      paintEnds(data);
+      paintCal(data);
+      paintReach(data);
+    } catch (error) {
+      $('#ins-funnel').textContent = `Could not load insights: ${error.message}`;
+    }
+  };
+  load();
 }

@@ -475,3 +475,45 @@ typed-confirm delete / restore-within-grace. Uploads are verified against their
 declared size after the R2 put. The ingest gates fail closed: no preview gain map,
 unreadable metadata, GPS tags, or a non-upright HDR preview all refuse with an
 explicit override flag.
+
+## Site analytics (first-party funnel)
+
+The public site measures its own booking funnel. No cookies, no third party, no PII; nothing
+under `/g`, `/admin` or `/api` is ever recorded (gallery links are credentials).
+
+**Pipeline.** `src/scripts/track.ts` (loaded once from BaseLayout, inert off the production
+host) batches events and `sendBeacon`s them to `POST /api/e` (`worker/routes/track.ts`), which
+writes D1 tables `site_sessions` + `site_events` (`worker/schema.sql`). Read side:
+`/admin/insights` ← `GET /api/admin/insights` (`worker/routes/insights.ts`). The daily cron
+deletes anything older than 400 days.
+
+**Instrumenting markup** — attributes, not code:
+- `data-ev="cta:lost"` on a clickable → `click` with that label.
+- `data-ev-view="book"` on a section → `view` once it holds the middle of the viewport for 1s.
+- Links need nothing: `mailto`, outbound (`out:<host>`) and internal (`to:<path>`) are automatic.
+  `<details class="faq">` openings report as `faq:<question-slug>`.
+- Inline islands push to the queue: `(window.fxq = window.fxq || []).push(['cal', 'ready', ms])`.
+
+**Vocabulary** (closed; the Worker drops anything else): `pv`, `engaged` (first trusted
+tap/key/wheel — the human test), `view`, `click`, `faq`, `cal` (`loading`, `ready`, `failed:<code>`,
+`step:*`, `booked`), `scroll` (25/50/75/100), `exit` (last section + visible seconds), `perf` (LCP ms).
+Details are short machine labels, never free text. Cal event payloads are never recorded.
+
+**Identity.** `sid` in sessionStorage (30 min idle = new session); `vid` in localStorage so a
+return visit is recognisable — omitted under Global Privacy Control / Do Not Track. No IP, no raw
+user agent (reduced to a browser/device class), country from `request.cf`. Times are relative to
+the session start. `build` stamps the site version (`astro.config.mjs`) on every session.
+
+**Sources.** `?s=<tag>` (e.g. `?s=ig`, `?s=xhs`, `?s=ig-story`) beats `utm_source` beats the
+referrer host beats an in-app user agent beats `direct`. The tag is read once and stripped from
+the address bar. `?s=me`, or loading `/admin`, marks that browser internal; internal sessions are
+stored but excluded from every number by default.
+
+**Reading it.** Funnel steps mean "got at least this far" among engaged sessions, and a calendar
+that mounted and then errored does not count as loaded. Traffic is small: read the session
+journal first, change one thing at a time, and judge by the upstream steps (reached booking,
+used the calendar), which move long before bookings do.
+
+**Not yet built (phase 2):** Cal.com webhook → `bookings` table joined on `sid` (closed-loop
+source → paid deposit), weekly digest email, calendar-failure alert.
+

@@ -107,10 +107,10 @@ const STREAM_CTAS: Record<string, { eyebrow: string; text: string; href: string;
         <>
           <StreamFigure entry={entry} lead={index === 0} />
           {STREAM_CTAS[entry.shoot.id] && (
-            <aside class="stream-cta">
+            <aside class="stream-cta" data-ev-view={`cta:${entry.shoot.id}`}>
               <span class="eyebrow">{STREAM_CTAS[entry.shoot.id].eyebrow}</span>
               <p class="stream-cta__text">{STREAM_CTAS[entry.shoot.id].text}</p>
-              <a class="stream-cta__link" href={STREAM_CTAS[entry.shoot.id].href}>
+              <a class="stream-cta__link" href={STREAM_CTAS[entry.shoot.id].href} data-ev={`cta:${entry.shoot.id}`}>
                 {STREAM_CTAS[entry.shoot.id].label} &rarr;
               </a>
             </aside>

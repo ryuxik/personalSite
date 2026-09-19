@@ -29,9 +29,11 @@ interface Props {
   title?: string;
   description?: string;
   bodyClass?: string;
+  /** Path the funnel tracker records for this page, when the URL is not it (404). */
+  analyticsPath?: string;
 }
 
-const { title, description, bodyClass } = Astro.props;
+const { title, description, bodyClass, analyticsPath } = Astro.props;
 
 const pageTitle = title ? `${title} · ${SITE.business}` : SITE.title;
 const pageDescription = description ?? SITE.description;
@@ -56,7 +58,7 @@ const hasHeadExtras = Astro.slots.has('head');
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-fx-path={analyticsPath}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -154,6 +156,15 @@ const hasHeadExtras = Astro.slots.has('head');
         <a href={SITE.instagram} rel="me noopener noreferrer" target="_blank">Instagram</a>
       </p>
     </footer>
+
+    {
+      /* First-party funnel tracker (SPEC.md § Site analytics): same-origin
+         beacon to /api/e, no cookies, no third party. Bundled once, cached
+         across pages, and inert off the production host. */
+    }
+    <script>
+      import '../scripts/track';
+    </script>
 
     {
       /* Cloudflare Web Analytics. Cookieless, no personal data, ~1 request.

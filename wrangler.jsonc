@@ -41,6 +41,11 @@
   // step 6. Until then this binding still deploys; sends fail over to Resend
   // (if configured) or log as no-ops without losing notification state.
   "send_email": [{ "name": "NOTIFY" }],
+  // Per-IP ceiling on the public funnel beacon, POST /api/e (SPEC.md § Site
+  // analytics). The IP is only the limiter's key at the edge — never stored.
+  "ratelimits": [
+    { "name": "TRACK_LIMIT", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } }
+  ],
   "triggers": {
     // Daily lifecycle pass: expiry warnings, trash-grace deletes, purge,
     // storage-vs-DB reconciliation, comment digest. worker/cron.ts.

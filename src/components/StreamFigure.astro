@@ -113,7 +113,7 @@ const shareOf = (row: Frame[], f: Frame) =>
   row.length === 1 ? 1 : ratio(f.image) / row.reduce((s, g) => s + ratio(g.image), 0);
 ---
 
-<figure class="shoot">
+<figure class="shoot" data-ev-view={`shoot:${entry.shoot.id}`}>
   {
     rows.map((row) => (
       <div class:list={['row', row.length === 2 && 'row--pair']}>

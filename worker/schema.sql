@@ -81,6 +81,41 @@ CREATE TABLE IF NOT EXISTS events (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Site funnel analytics (SPEC.md § Site analytics). First-party, cookieless,
+-- no IP, no raw user agent, no PII. Dimensions live once per session; events
+-- stay narrow. NOT the `events` table above — that one is the gallery audit log.
+CREATE TABLE IF NOT EXISTS site_sessions (
+  sid          TEXT PRIMARY KEY,                -- random, sessionStorage; 30 min idle = new session
+  vid          TEXT,                            -- random, localStorage; NULL under GPC / DNT
+  started_at   TEXT NOT NULL,                   -- server clock minus the client's relative offset
+  landing_path TEXT NOT NULL,
+  source       TEXT NOT NULL,                   -- resolved: ?s= tag > utm_source > referrer > in-app UA > direct
+  source_raw   TEXT NOT NULL DEFAULT '',        -- the tag / utm exactly as sent
+  visit_n      INTEGER NOT NULL DEFAULT 1,      -- nth session for this vid
+  ref_host     TEXT NOT NULL DEFAULT '',        -- host only, never the full referrer
+  country      TEXT NOT NULL DEFAULT '',        -- request.cf.country
+  device       TEXT NOT NULL DEFAULT '',        -- mobile | tablet | desktop
+  browser      TEXT NOT NULL DEFAULT '',        -- ig-inapp | xhs-inapp | wechat | safari | chrome | firefox | other
+  build        TEXT NOT NULL DEFAULT '',        -- site version the visitor saw
+  human        INTEGER NOT NULL DEFAULT 0,      -- 1 after a trusted input event
+  internal     INTEGER NOT NULL DEFAULT 0       -- 1 = the photographer's own browser
+);
+
+CREATE TABLE IF NOT EXISTS site_events (
+  id     INTEGER PRIMARY KEY AUTOINCREMENT,
+  sid    TEXT NOT NULL,
+  seq    INTEGER NOT NULL,                      -- client sequence; with sid, makes retried beacons idempotent
+  t_ms   INTEGER NOT NULL,                      -- ms since session start (relative, so client clock skew is moot)
+  path   TEXT NOT NULL,
+  name   TEXT NOT NULL,                         -- closed vocabulary, worker/routes/track.ts
+  detail TEXT NOT NULL DEFAULT '',
+  v      REAL,                                  -- numeric payload: ms, percent, seconds
+  UNIQUE (sid, seq)
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_sessions_started ON site_sessions (started_at);
+CREATE INDEX IF NOT EXISTS idx_site_events_name ON site_events (name, detail);
+
 CREATE INDEX IF NOT EXISTS idx_photos_gallery ON photos (gallery_id, position, stem);
 CREATE INDEX IF NOT EXISTS idx_assets_photo   ON assets (photo_id, kind, version);
 CREATE INDEX IF NOT EXISTS idx_comments_photo ON comments (photo_id, created_at);

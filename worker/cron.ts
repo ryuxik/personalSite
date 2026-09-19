@@ -263,6 +263,16 @@ export async function runCron(env: Env): Promise<void> {
             .bind(new Date().toISOString(), g.id).run();
       }
     }],
+
+    // ---- site analytics retention (SPEC.md § Site analytics): 400 days ----
+    ['analytics-retention', async () => {
+      await db.batch([
+        db.prepare(
+          "DELETE FROM site_events WHERE sid IN (SELECT sid FROM site_sessions WHERE started_at < datetime('now', '-400 days'))"
+        ),
+        db.prepare("DELETE FROM site_sessions WHERE started_at < datetime('now', '-400 days')"),
+      ]);
+    }],
   ];
 
   for (const [name, run] of stages) {

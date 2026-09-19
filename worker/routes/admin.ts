@@ -36,6 +36,7 @@ import { crc32 as crc32Of, hasIsoGainMap } from '../lib/bytes';
 // the WORKER so browser ingest is held to the same standard as the CLI.
 import ExifReader from 'exifreader';
 import { verifyAccessJwt } from '../lib/access';
+import { insightsOverview, insightsSession } from './insights';
 
 /** Fixed kinds plus l<width>/a<width> ladder rungs — widths are dynamic since
  * a narrow master contributes its own width as the top rung (photo-meta rule). */
@@ -134,6 +135,7 @@ export async function handleAdmin(request: Request, env: Env, path: string[]): P
 
   if (path[0] === 'admin') {
     if (path.length === 1) return adminHome();
+    if (path[1] === 'insights' && path.length === 2) return adminInsights();
     if (path[1] === 'g' && path[2]) return adminGallery(env, Number(path[2]));
     return json({ error: 'not found' }, 404);
   }
@@ -142,6 +144,8 @@ export async function handleAdmin(request: Request, env: Env, path: string[]): P
   const rest = path.slice(2);
   const method = request.method;
 
+  if (rest[0] === 'insights' && method === 'GET')
+    return rest[1] ? insightsSession(env, rest[1]) : insightsOverview(request, env);
   if (rest[0] === 'galleries' && rest.length === 1 && method === 'POST') return createGallery(request, env);
   if (rest[0] === 'galleries' && rest.length === 1 && method === 'GET') return listGalleries(env);
   if (rest[0] === 'galleries' && rest[1]) {
@@ -577,7 +581,7 @@ function adminHome(): Response {
   return adminShell(
     'Selects admin',
     `<main class="admin" data-view="home">
-  <header class="ahead"><h1>Selects</h1><p class="ahead__sub">private client galleries · ryuxik.io</p></header>
+  <header class="ahead"><h1>Selects</h1><p class="ahead__sub">private client galleries · ryuxik.io · <a href="/admin/insights">site insights →</a></p></header>
   <section id="create" class="panel">
     <h2>New gallery</h2>
     <form id="create-form">
@@ -589,6 +593,29 @@ function adminHome(): Response {
     </form>
   </section>
   <section id="galleries" class="panel"><h2>Galleries</h2><div id="list">Loading…</div></section>
+</main>
+<script type="module" src="/admin/admin.js"></script>`
+  );
+}
+
+/** The public site's funnel (SPEC.md § Site analytics). All data comes from
+ * /api/admin/insights; admin.js paints it. */
+function adminInsights(): Response {
+  return adminShell(
+    'Insights · Selects admin',
+    `<main class="admin" data-view="insights">
+  <header class="ahead">
+    <p><a href="/admin">← all galleries</a></p>
+    <h1>Insights</h1>
+    <p class="ahead__sub">ryuxik.io funnel · first-party, no cookies</p>
+  </header>
+  <section class="panel" id="ins-filters"><div id="ins-filters-body"></div></section>
+  <section class="panel"><h2>Funnel</h2><div id="ins-funnel">Loading…</div></section>
+  <section class="panel"><h2>Sessions</h2><div id="ins-journal"></div></section>
+  <section class="panel"><h2>Sources</h2><div id="ins-sources"></div></section>
+  <section class="panel"><h2>Where they stopped</h2><div id="ins-ends"></div></section>
+  <section class="panel"><h2>Calendar health</h2><div id="ins-cal"></div></section>
+  <section class="panel"><h2>Signals</h2><div id="ins-reach"></div></section>
 </main>
 <script type="module" src="/admin/admin.js"></script>`
   );
