@@ -1,27 +1,52 @@
 ---
 /**
  * Grain Studio — landing (marketing URL for the App Store record; grows into the sales page).
+ * The App Store link carries an App Store Connect campaign token (`ct`) so each inbound source shows up
+ * under Analytics › Acquisition › Campaigns; it needs the provider token (`pt`, App Store Connect ›
+ * Analytics › Campaign Links) to be attributed — set PT below. No cookies, nothing stored.
  */
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Seo from '../../components/Seo.astro';
+
+const STORE = 'https://apps.apple.com/app/grain-studio-by-ryuxik/id6810501253';
 ---
 
 <BaseLayout>
-  <Seo slot="head" title="Grain Studio" description="Make digital photos look like film — real grain, halation and emulsion softness — and keep them HDR for Apple Photos, Instagram and RedNote. A Mac app." ogImage="/og/home.jpg" />
+  <Seo slot="head" title="Grain Studio" description="Make digital photos look like film — grain measured from real negatives, halation and emulsion softness — and keep them HDR for Apple Photos, Instagram and RedNote. On the App Store for iPhone, iPad and Mac." ogImage="/og/home.jpg" />
   <article class="column gs">
-    <p class="eyebrow">Grain Studio · for the Mac</p>
+    <p class="eyebrow">Grain Studio · on the App Store for iPhone, iPad and Mac</p>
     <h1>Make digital photos look like film. Keep them HDR.</h1>
-    <p>Drop in your photos, pick a look, press Process. You get back files that look like a good film scan — real grain, the glow film makes around bright lights, the soft edges of an emulsion — and that still show as HDR in Apple Photos, Instagram and RedNote.</p>
-    <p>The grain is measured from real 120 and 35 mm negatives and sits in the picture the way film grain does: bigger in the shadows, finer in the highlights, gone in pure white. Every option in the app has a “?” with pictures and a plain explanation of each choice.</p>
-    <p>Start from a Lightroom HDR export, an iPhone HEIC, a 16-bit scan or a camera RAW. Get a full-resolution master plus Instagram and RedNote versions with the same grain — 3:4, 4:5, 1:1 or a 9:16 reel, cropped or framed on a clean border. A whole shoot in one batch; nothing is ever overwritten. No account, no upload: your photos never leave your Mac.</p>
-    <p class="gs__cta">Coming to the Mac App Store. Free for 7 days at full quality, then a one-time unlock — no subscription.</p>
+    <p>Grain Studio finishes the photos you already have. Pick a look and you get back a file that looks like a good film scan — real grain, the glow film makes around bright lights, the soft edges of an emulsion — and that still shows as HDR in Apple Photos, Instagram and RedNote.</p>
+    <p>The grain is measured from my own 120 negatives — the 35 mm look is the same emulsion at 35 mm’s magnification, and the edge softness is measured from my 120 and 35 mm scans — and it sits in the picture the way film grain does: bigger in the shadows, finer in the highlights, gone in pure white. On the phone, six looks are rendered on your own photo before you choose; on the Mac, every option has a “?” with pictures and a plain explanation.</p>
+    <p>Start from a Lightroom HDR export, an iPhone photo, a 16-bit scan or a camera RAW. Get a full-resolution master plus Instagram and RedNote versions with the same grain, sized the way each platform keeps them. A whole shoot in one batch on the Mac; nothing is ever overwritten. No account, no upload, no analytics: your photos never leave your device.</p>
+    <p class="gs__cta"><a class="gs__store" data-store href={STORE}>Download on the App Store</a></p>
+    <p class="gs__terms">Free for 7 days at full quality, then a one-time unlock — no subscription. One purchase covers Mac, iPhone and iPad.</p>
     <p class="gs__links"><a href="/grain-studio/support">Support</a> · <a href="/grain-studio/privacy">Privacy</a></p>
+    <p class="gs__fine">For the frames you did not shoot on film. Grain Studio is not affiliated with any film manufacturer.</p>
   </article>
 </BaseLayout>
+
+<script is:inline>
+  // ?src=ig-bio (or the referring host) becomes the campaign token on the App Store link.
+  (function () {
+    var PT = '';                                   // provider token from App Store Connect › Analytics › Campaign Links
+    var src = new URLSearchParams(location.search).get('src');
+    if (!src && document.referrer) { try { src = new URL(document.referrer).hostname.replace(/^www\./, ''); } catch (e) {} }
+    var ct = (src || 'web-home').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30) || 'web-home';
+    if (!PT) return;
+    document.querySelectorAll('a[data-store]').forEach(function (a) {
+      var u = new URL(a.href); u.searchParams.set('pt', PT); u.searchParams.set('ct', ct); u.searchParams.set('mt', '8'); a.href = u.toString();
+    });
+  })();
+</script>
 
 <style>
   .gs { padding-block: clamp(2rem, 8vh, 5rem); max-width: 42rem; }
   .gs p { margin-top: var(--space-4); line-height: 1.6; }
   .gs__cta { font-family: var(--grotesque); font-weight: 500; }
+  .gs__store { display: inline-block; padding: 0.7em 1.2em; border: 1px solid currentColor; border-radius: 6px; color: inherit; text-decoration: none; }
+  .gs__store:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .gs__terms { font-family: var(--grotesque); }
   .gs__links a { color: var(--accent); }
+  .gs__fine { font-size: 0.85em; opacity: 0.7; }
 </style>
