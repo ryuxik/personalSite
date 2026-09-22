@@ -29,7 +29,7 @@ const STORE = 'https://apps.apple.com/app/grain-studio-by-ryuxik/id6810501253';
 <script is:inline>
   // ?src=ig-bio (or the referring host) becomes the campaign token on the App Store link.
   (function () {
-    var PT = '';                                   // provider token from App Store Connect › Analytics › Campaign Links
+    var PT = '128902452';                          // provider token from App Store Connect › Analytics › Campaign Links
     var src = new URLSearchParams(location.search).get('src');
     if (!src && document.referrer) { try { src = new URL(document.referrer).hostname.replace(/^www\./, ''); } catch (e) {} }
     var ct = (src || 'web-home').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30) || 'web-home';
