@@ -1,0 +1,165 @@
+---
+/**
+ * Grain Studio — the grain, measured. Proof page for the "rendered for every size" claim:
+ * the method, the measured numbers (project record, 23 Sep 2026) and 100 % crops of one
+ * approved portrait (B8-DSC04020). The crops in public/grain-studio/grain/ are sRGB JPEGs
+ * cut pixel for pixel from the app's own renders: master x 4240–4840, y 3160–3560 (600 × 400);
+ * the 1080 px versions x 450–750, y 358–558 (300 × 200), centred on the same patch of cheek.
+ * The App Store link carries the same campaign-token mechanism as ../index.astro.
+ */
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Seo from '../../../components/Seo.astro';
+
+const STORE = 'https://apps.apple.com/app/grain-studio-by-ryuxik/id6810501253';
+const CHECKED = '23 September 2026';
+
+const numbers = [
+  { file: '1080 px post, grain size 1 (as measured)', value: '1.2 %' },
+  { file: '1080 px post, grain size 2', value: '1.5 %' },
+  { file: '1080 px post, grain size 3', value: '1.8 %' },
+  { file: '1080 px post, 35 mm look', value: '1.7 %' },
+  { file: 'Full-size master, 8200 px', value: '3.6 %' },
+];
+
+const prices = [
+  { app: 'Halide Mark III', price: '$69.99' },
+  { app: 'Darkroom', price: '$99.99' },
+  { app: 'Photomator', price: '$119.99' },
+  { app: 'DxO FilmPack 8', price: '$149.99' },
+  { app: 'Dehancer photo', price: '$49.99 a year' },
+  { app: 'Film(ish)', price: '$19.99' },
+  { app: 'Grain Studio', price: '$49.99 once, for iPhone, iPad and Mac' },
+];
+
+// Where the 600 × 400 master patch lands inside the 300 × 200 crop of the 1080 px file (82 × 55 px).
+const footprint = 'left:36.4%;top:36.5%;width:27.3%;height:27.3%';
+---
+
+<BaseLayout>
+  <Seo
+    slot="head"
+    title="Why the grain is rendered for every size"
+    description="Grain Studio renders its grain for the size of each file instead of resampling it. The method, the measured numbers and 100 % crops of the master and the 1080 px post."
+    ogImage="/og/home.jpg"
+    type="article"
+  />
+  <article class="column gs">
+    <p class="eyebrow">Grain Studio · the grain, measured</p>
+    <h1>Why the grain is rendered for every size</h1>
+    <p class="gs__date">Measured {CHECKED}. Prices checked the same day.</p>
+
+    <p>I shoot 120 film in Brooklyn, and I built Grain Studio to finish the digital frames that sit beside it. Its grain is measured from my own 120 negatives, and the app renders that grain for the size of each file it writes: a fine tooth on the 1080 px post, real printable grain on the full-size master. This page is the evidence. What other tools do, what Grain Studio does instead, the numbers, and crops at 100 % so you can check them yourself.</p>
+
+    <h2>What resampled grain does</h2>
+    <p>Most editors add grain once, at the full size of the photo, as a layer of pixels on top of the image. When you export a smaller version for a post, that layer is shrunk with everything else. Capture One says so in its own blog post on film grain (13 November 2014): the grain is added at full size and scales with the image when you downsize on export. That is the usual design, and its result is predictable. Grain that looks right on a 50-megapixel master is mostly averaged away by the resampling filter at 1080 px. To make it survive the shrink you have to make it far coarser than the negative would justify on the master. Either way, one of the two files is wrong, and the small one stops looking like a scan of film and starts looking like a large file that was reduced.</p>
+
+    <h2>What Grain Studio does instead</h2>
+    <p>Grain Studio treats each output as its own print. The full-size master, the 1080 px Instagram version and the 1242 px RedNote version are each rendered from the tone-mapped image at their own pixel size, and the grain is generated at that size, in linear light, from the same measured plates. Nothing is rendered large and then scaled down. The grain also sits in the picture the way film grain does: bigger in the shadows, finer in the highlights, gone in pure white.</p>
+    <p>At post size the result is deliberately quiet. A 6 × 7 negative scanned and reduced to 1080 px shows a fine tooth rather than visible grain, and that is what the 1080 px version gets by default. Because some people want the grain to read on a phone screen, version 1.3 adds a grain-size slider from 1, the measured size, up to 3. On the master the grain is at its real size, and it prints.</p>
+
+    <h2>The numbers</h2>
+    <p>The method is simple enough to repeat. Take a flat patch of skin. Subtract the pass-through, the same photo on the same tone map with no grain, glow or softness, from the developed file. The rms of that difference in luma, as a percentage of the patch's mean luma, is the grain modulation. Measured on the portrait below, {CHECKED}:</p>
+    <table>
+      <thead>
+        <tr><th scope="col">File</th><th scope="col" class="num">Grain modulation</th></tr>
+      </thead>
+      <tbody>
+        {numbers.map((n) => (
+          <tr><td>{n.file}</td><td class="num">{n.value}</td></tr>
+        ))}
+      </tbody>
+    </table>
+    <p>Repeated on the exact 600 × 400 patch shown below, the same method gives 1.2, 1.6, 1.9 and 1.7 % at 1080 px and 3.9 % on the master. The 35 mm look is the same emulsion at 35 mm's magnification, so its grain is coarser at every size. The 120 look is the one I measured directly; the edge softness is measured from both my 120 and my 35 mm scans.</p>
+
+    <h2>The crops, at 100 %</h2>
+    <p>All four are cut pixel for pixel from the files Grain Studio wrote, converted from Display P3 to sRGB, and saved as JPEG at quality 92 with no chroma subsampling. Nothing was retouched. They are shown at one file pixel per CSS pixel without smoothing, so a Retina screen draws each pixel as an even 2 × 2 block; on a phone they are scaled to fit. Click a crop to open the file itself.</p>
+
+    <figure class="crop">
+      <a class="crop__frame" href="/grain-studio/grain/b8-master-developed.jpg">
+        <img src="/grain-studio/grain/b8-master-developed.jpg" width="600" height="400" alt="600 by 400 pixel crop of a cheek from the full-size developed master, showing fine film grain on skin" loading="lazy" decoding="async" />
+      </a>
+      <figcaption>1 · Full-size master (8200 px), developed. 600 × 400 pixels of the cheek.</figcaption>
+    </figure>
+
+    <figure class="crop">
+      <a class="crop__frame" href="/grain-studio/grain/b8-master-pass-through.jpg">
+        <img src="/grain-studio/grain/b8-master-pass-through.jpg" width="600" height="400" alt="The same 600 by 400 pixel crop of the cheek from the pass-through master, with no grain, glow or softness" loading="lazy" decoding="async" />
+      </a>
+      <figcaption>2 · Full-size master, pass-through: the same pixels on the same tone map with no grain, glow or softness. The difference between this crop and the one above is what the table measures.</figcaption>
+    </figure>
+
+    <figure class="crop">
+      <a class="crop__frame" href="/grain-studio/grain/b8-post-1080-size-1.jpg">
+        <img class="crop__post" src="/grain-studio/grain/b8-post-1080-size-1.jpg" width="300" height="200" alt="300 by 200 pixel crop of the face from the 1080 pixel Instagram version at grain size 1, shown at 200 percent" loading="lazy" decoding="async" />
+        <span class="crop__mark" style={footprint} aria-hidden="true"></span>
+      </a>
+      <figcaption>3 · The 1080 px Instagram version, developed at grain size 1. 300 × 200 pixels of the file, each drawn as a 2 × 2 block: 200 %, nothing resampled. The outlined rectangle is where the 600 × 400 master patch above lands at this size, 82 × 55 pixels.</figcaption>
+    </figure>
+
+    <figure class="crop">
+      <a class="crop__frame" href="/grain-studio/grain/b8-post-1080-size-3.jpg">
+        <img class="crop__post" src="/grain-studio/grain/b8-post-1080-size-3.jpg" width="300" height="200" alt="The same 300 by 200 pixel crop from the 1080 pixel Instagram version at grain size 3, shown at 200 percent" loading="lazy" decoding="async" />
+        <span class="crop__mark" style={footprint} aria-hidden="true"></span>
+      </a>
+      <figcaption>4 · The 1080 px Instagram version at grain size 3. Same crop, same display.</figcaption>
+    </figure>
+
+    <h2>What the apps charge</h2>
+    <p>Prices as shown on the US App Store or the maker's own site on {CHECKED}, one-time unless noted. They change; each app's own page is the reference.</p>
+    <table>
+      <thead>
+        <tr><th scope="col">App</th><th scope="col">Price</th></tr>
+      </thead>
+      <tbody>
+        {prices.map((p) => (
+          <tr><td>{p.app}</td><td>{p.price}</td></tr>
+        ))}
+      </tbody>
+    </table>
+    <p>Grain Studio is free for 7 days at full quality, then a one-time unlock, no subscription. One purchase for iPhone, iPad and Mac.</p>
+
+    <p class="gs__cta"><a class="gs__store" data-store href={STORE}>Download on the App Store</a></p>
+    <p class="gs__links"><a href="/grain-studio/">Grain Studio</a> · <a href="/grain-studio/support">Support</a> · <a href="/grain-studio/privacy">Privacy</a></p>
+    <p class="gs__fine">Grain Studio is not affiliated with any film manufacturer, nor with the makers of the apps named above.</p>
+  </article>
+</BaseLayout>
+
+<script is:inline>
+  // Same mechanism as /grain-studio/: ?src=… (or the referring host) becomes the campaign token; default web-grain.
+  (function () {
+    var PT = '128902452';                          // provider token from App Store Connect › Analytics › Campaign Links
+    var src = new URLSearchParams(location.search).get('src');
+    if (!src && document.referrer) { try { src = new URL(document.referrer).hostname.replace(/^www\./, ''); } catch (e) {} }
+    var ct = (src || 'web-grain').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30) || 'web-grain';
+    if (!PT) return;
+    document.querySelectorAll('a[data-store]').forEach(function (a) {
+      var u = new URL(a.href); u.searchParams.set('pt', PT); u.searchParams.set('ct', ct); u.searchParams.set('mt', '8'); a.href = u.toString();
+    });
+  })();
+</script>
+
+<style>
+  .gs { padding-block: clamp(2rem, 8vh, 5rem); max-width: 42rem; }
+  .gs h2 { margin-top: var(--space-7); font-size: 1.15rem; }
+  .gs p { margin-top: var(--space-4); line-height: 1.6; }
+  .gs__date { font-family: var(--grotesque); font-size: 0.85rem; color: var(--ink-faint); }
+
+  .gs table { margin-top: var(--space-4); font-size: 0.95rem; }
+  .gs th, .gs td { text-align: left; vertical-align: top; padding: 0.45em 0.6em; border-bottom: 1px solid var(--line); }
+  .gs th { font-family: var(--grotesque); font-weight: 500; font-size: 0.76rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); }
+  .gs .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* 100 % crops: one file pixel per CSS pixel, drawn without smoothing (an even 2 × 2 block on a 2× screen). */
+  .crop { margin-top: var(--space-6); }
+  .crop__frame { position: relative; display: block; width: 600px; max-width: 100%; }
+  .crop img { width: 100%; height: auto; image-rendering: pixelated; }
+  .crop__mark { position: absolute; border: 1px solid var(--accent); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55); pointer-events: none; }
+  .crop figcaption { margin-top: var(--space-2); }
+  @media (max-width: 664px) { .crop img { image-rendering: auto; } } /* below 600 px + the column padding the frame shrinks, so smooth it */
+
+  .gs__cta { margin-top: var(--space-6); font-family: var(--grotesque); font-weight: 500; }
+  .gs__store { display: inline-block; padding: 0.7em 1.2em; border: 1px solid currentColor; border-radius: 6px; color: inherit; text-decoration: none; }
+  .gs__store:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .gs__links a { color: var(--accent); }
+  .gs__fine { font-size: 0.85em; opacity: 0.7; }
+</style>

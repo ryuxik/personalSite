@@ -12,16 +12,18 @@ const STORE = 'https://apps.apple.com/app/grain-studio-by-ryuxik/id6810501253';
 ---
 
 <BaseLayout>
-  <Seo slot="head" title="Grain Studio" description="Make digital photos look like film — grain measured from real negatives, halation and emulsion softness — and keep them HDR for Apple Photos, Instagram and RedNote. On the App Store for iPhone, iPad and Mac." ogImage="/og/home.jpg" />
+  <Seo slot="head" title="Grain Studio" description="Make digital photos look like film — grain measured from real 120 negatives and rendered for every size, halation and emulsion softness — and keep them HDR in Apple Photos and on Instagram. One purchase for iPhone, iPad and Mac." ogImage="/og/home.jpg" />
   <article class="column gs">
     <p class="eyebrow">Grain Studio · on the App Store for iPhone, iPad and Mac</p>
     <h1>Make digital photos look like film. Keep them HDR.</h1>
-    <p>Grain Studio finishes the photos you already have. Pick a look and you get back a file that looks like a good film scan — real grain, the glow film makes around bright lights, the soft edges of an emulsion — and that still shows as HDR in Apple Photos, Instagram and RedNote.</p>
+    <p class="gs__proof">Real grain. Every size. Measured, not imagined.</p>
+    <p>Grain is rendered for the size of each file — a fine tooth on the 1080 px post, real printable grain on the full-size master — never resampled. <a href="/grain-studio/grain/">See it measured, with 100 % crops.</a></p>
+    <p>Grain Studio finishes the photos you already have. Pick a look and you get back a file that looks like a good film scan — real grain, the glow film makes around bright lights, the soft edges of an emulsion — and that still shows as HDR in Apple Photos and, posted as a feed photo, on Instagram.</p>
     <p>The grain is measured from my own 120 negatives — the 35 mm look is the same emulsion at 35 mm’s magnification, and the edge softness is measured from my 120 and 35 mm scans — and it sits in the picture the way film grain does: bigger in the shadows, finer in the highlights, gone in pure white. On the phone, six looks are rendered on your own photo before you choose; on the Mac, every option has a “?” with pictures and a plain explanation.</p>
-    <p>Start from a Lightroom HDR export, an iPhone photo, a 16-bit scan or a camera RAW. Get a full-resolution master plus Instagram and RedNote versions with the same grain, sized the way each platform keeps them. A whole shoot in one batch on the Mac; nothing is ever overwritten. No account, no upload, no analytics: your photos never leave your device.</p>
+    <p>Start from a Lightroom HDR export, an iPhone photo, a 16-bit scan or a camera RAW. Get a full-resolution master plus an Instagram version (1080 px) and a RedNote version (1242 px, 3:4), sized the way each platform keeps them, each with grain rendered for its own size. A whole shoot in one batch on the Mac; nothing is ever overwritten. No account, no upload, no analytics: your photos never leave your device.</p>
     <p class="gs__cta"><a class="gs__store" data-store href={STORE}>Download on the App Store</a></p>
-    <p class="gs__terms">Free for 7 days at full quality, then a one-time unlock — no subscription. One purchase covers Mac, iPhone and iPad.</p>
-    <p class="gs__links"><a href="/grain-studio/support">Support</a> · <a href="/grain-studio/privacy">Privacy</a></p>
+    <p class="gs__terms">Free for 7 days at full quality, then a one-time unlock — no subscription. One purchase for iPhone, iPad and Mac.</p>
+    <p class="gs__links"><a href="/grain-studio/grain/">The grain, measured</a> · <a href="/grain-studio/support">Support</a> · <a href="/grain-studio/privacy">Privacy</a></p>
     <p class="gs__fine">For the frames you did not shoot on film. Grain Studio is not affiliated with any film manufacturer.</p>
   </article>
 </BaseLayout>
@@ -43,6 +45,7 @@ const STORE = 'https://apps.apple.com/app/grain-studio-by-ryuxik/id6810501253';
 <style>
   .gs { padding-block: clamp(2rem, 8vh, 5rem); max-width: 42rem; }
   .gs p { margin-top: var(--space-4); line-height: 1.6; }
+  .gs__proof { font-family: var(--grotesque); font-weight: 500; color: var(--accent); }
   .gs__cta { font-family: var(--grotesque); font-weight: 500; }
   .gs__store { display: inline-block; padding: 0.7em 1.2em; border: 1px solid currentColor; border-radius: 6px; color: inherit; text-decoration: none; }
   .gs__store:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }

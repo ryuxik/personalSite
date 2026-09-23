@@ -1,6 +1,6 @@
 ---
 /**
- * Grain Studio — privacy policy (required by App Store Connect).
+ * Grain Studio — privacy policy (required by App Store Connect). Covers iPhone, iPad and Mac.
  * The app collects nothing; this page says so plainly.
  */
 import BaseLayout from '../../layouts/BaseLayout.astro';
@@ -9,20 +9,23 @@ import { SITE } from '../../config';
 ---
 
 <BaseLayout>
-  <Seo slot="head" title="Grain Studio · Privacy" description="Grain Studio collects nothing. Your photographs never leave your Mac." ogImage="/og/home.jpg" />
+  <Seo slot="head" title="Grain Studio · Privacy" description="Grain Studio collects nothing. Your photographs never leave your iPhone, iPad or Mac." ogImage="/og/home.jpg" />
   <article class="column gs">
     <p class="eyebrow">Grain Studio</p>
     <h1>Privacy policy</h1>
-    <p class="gs__date">Effective 9 September 2026</p>
+    <p class="gs__date">Effective 9 September 2026 · updated 23 September 2026 for iPhone and iPad</p>
 
     <h2>What Grain Studio collects</h2>
-    <p>Nothing. Grain Studio runs entirely on your Mac. It has no account, no analytics, no crash reporter of its own, and it does not connect to the internet except through Apple's App Store frameworks to handle the free trial and the unlock purchase. Your photographs are read from the files you choose and written to the folder you choose; they are never uploaded anywhere.</p>
+    <p>Nothing. Grain Studio runs entirely on your iPhone, iPad or Mac. It has no account, no analytics, no crash reporter of its own, and it does not connect to the internet except through Apple's StoreKit framework to handle the free trial and the unlock purchase. Your photographs are read from the files or library items you choose and written to the album or folder you choose; they are never uploaded anywhere.</p>
 
     <h2>Purchases</h2>
-    <p>The trial and the unlock are processed by Apple through the Mac App Store under Apple's terms. Grain Studio receives only a signed confirmation that the purchase exists; it never sees your payment details.</p>
+    <p>The trial and the unlock are processed by Apple through the App Store under Apple's terms, as one purchase for iPhone, iPad and Mac. Grain Studio receives a signed confirmation that the purchase exists; it never sees your payment details.</p>
+
+    <h2>Photos</h2>
+    <p>On iPhone and iPad, the photos you pick come through the system picker, which shares just those items with the app. The first time it saves a finished photo, the app asks for permission to add to your library so it can create the “Grain Studio” album; it does not ask to read your library, and it never changes or deletes anything in it. On the Mac, adding finished files to Photos is off until you turn it on, and macOS asks for permission then.</p>
 
     <h2>Files and folders</h2>
-    <p>Grain Studio is sandboxed by macOS. It can read the photos you open or drop onto it, write to the output folder you select (by default your Pictures folder), and move an original AVIF to the Trash only when you have asked it to. A cache of grain plates is kept in the app's own container so later photos process faster; deleting the app removes it.</p>
+    <p>Grain Studio is sandboxed on every platform. On iPhone and iPad it writes to its own folder, shown in Files as On My iPhone → Grain Studio. On the Mac it can read the photos you open or drop onto it, write to the output folder you select (by default Pictures / Grain), and move an original AVIF to the Trash when you have asked it to. A cache of grain plates is kept in the app's own container so later photos process faster; deleting the app removes it.</p>
 
     <h2>Logs</h2>
     <p>A processing log is kept inside the app's container to help you diagnose problems. It is never sent anywhere unless you choose to share it.</p>
