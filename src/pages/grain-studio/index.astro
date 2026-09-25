@@ -4,26 +4,89 @@
  * The App Store link carries an App Store Connect campaign token (`ct`) so each inbound source shows up
  * under Analytics › Acquisition › Campaigns; it needs the provider token (`pt`, App Store Connect ›
  * Analytics › Campaign Links) to be attributed — set PT below. No cookies, nothing stored.
+ * Search (marketing/14-aso-seo-plan.md §6, 24 Sep 2026): the title and H2s carry what buyers type — film grain,
+ * halation, HDR, carousels; JSON-LD SoftwareApplication (no aggregateRating until real ratings exist); the Safari
+ * Smart App Banner. The before/after is the approved A10 frame (the App Store hero), digital left, developed right.
  */
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Seo from '../../components/Seo.astro';
 
 const STORE = 'https://apps.apple.com/app/grain-studio-by-ryuxik/id6810501253';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Grain Studio',
+  alternateName: 'Grain Studio: Film Grain & HDR',
+  applicationCategory: 'MultimediaApplication',
+  applicationSubCategory: 'Photo & Video',
+  operatingSystem: 'iOS 18, iPadOS 18, macOS 15',
+  description: 'Adds film grain measured from real medium-format negatives, halation and emulsion softness to photos you already have, and keeps them HDR (HDR HEIC with a gain map). Makes 4:5 and 3:4 post sizes and HDR carousels. Batch processing on Mac.',
+  url: 'https://ryuxik.io/grain-studio/',
+  downloadUrl: 'https://apps.apple.com/app/id6810501253',
+  installUrl: 'https://apps.apple.com/app/id6810501253',
+  image: 'https://ryuxik.io/grain-studio/og.jpg',
+  featureList: [
+    'Film grain measured from real negatives, rendered for each output size',
+    'Halation and emulsion softness',
+    'HDR in, HDR out: gain-map HEIC from HDR AVIF, HEIC, RAW or TIFF',
+    'Instagram (4:5) and RedNote (3:4) versions',
+    'HDR carousels on one tone map, and a slide designer',
+    'Batch processing on Mac',
+  ],
+  author: { '@type': 'Person', name: 'Santiago Munoz', url: 'https://ryuxik.io/' },
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD', description: 'Free download; 7-day trial, then a one-time in-app unlock.' },
+  sameAs: ['https://apps.apple.com/app/id6810501253'],
+};
 ---
 
 <BaseLayout>
-  <Seo slot="head" title="Grain Studio" description="Make digital photos look like film — grain measured from real 120 negatives and rendered for every size, halation and emulsion softness — and keep them HDR in Apple Photos and on Instagram. One purchase for iPhone, iPad and Mac." ogImage="/og/home.jpg" />
+  <Seo slot="head" fullTitle="Grain Studio: Film Grain, Halation & HDR for iPhone and Mac" description="Add film grain measured from real negatives, halation and softness to photos you already have, and keep them HDR. Plus HDR carousels. iPhone, iPad, Mac." ogImage="/grain-studio/og.jpg" imageAlt="A night street photo before and after Grain Studio: film grain, halation and HDR kept" />
+  <meta slot="head" name="apple-itunes-app" content="app-id=6810501253" />
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <article class="column gs">
     <p class="eyebrow">Grain Studio · on the App Store for iPhone, iPad and Mac</p>
     <h1>Make digital photos look like film. Keep them HDR.</h1>
     <p class="gs__proof">Real grain. Every size. Measured, not imagined.</p>
-    <p>Grain is rendered for the size of each file — a fine tooth on the 1080 px post, real printable grain on the full-size master — never resampled. <a href="/grain-studio/grain/">See it measured, with 100 % crops.</a></p>
+    <figure class="gs__hero">
+      <img src="/grain-studio/before-after.jpg" width="1600" height="1000" alt="A night food stall, split down the middle: the digital photo on the left, the same photo developed in Grain Studio on the right, with film grain and a red-orange glow around the neon sign" />
+      <figcaption>Left: the photo as shot. Right: developed — grain, halation, still HDR.</figcaption>
+    </figure>
     <p>Grain Studio finishes the photos you already have. Pick a look and you get back a file that looks like a good film scan — real grain, the glow film makes around bright lights, the soft edges of an emulsion — and that still shows as HDR in Apple Photos and, posted as a feed photo, on Instagram.</p>
-    <p>The grain is measured from my own 120 negatives — the 35 mm look is the same emulsion at 35 mm’s magnification, and the edge softness is measured from my 120 and 35 mm scans — and it sits in the picture the way film grain does: bigger in the shadows, finer in the highlights, gone in pure white. On the phone, six looks are rendered on your own photo before you choose; on the Mac, every option has a “?” with pictures and a plain explanation.</p>
-    <p>Start from a Lightroom HDR export, an iPhone photo, a 16-bit scan or a camera RAW. Get a full-resolution master plus an Instagram version (1080 px) and a RedNote version (1242 px, 3:4), sized the way each platform keeps them, each with grain rendered for its own size. A whole shoot in one batch on the Mac; nothing is ever overwritten. No account, no upload, no analytics: your photos never leave your device.</p>
     <p class="gs__cta"><a class="gs__store" data-store href={STORE}>Download on the App Store</a></p>
-    <p class="gs__terms">Free for 7 days at full quality, then a one-time unlock — no subscription. One purchase for iPhone, iPad and Mac.</p>
-    <p class="gs__links"><a href="/grain-studio/grain/">The grain, measured</a> · <a href="/grain-studio/support">Support</a> · <a href="/grain-studio/privacy">Privacy</a></p>
+
+    <h2>Film grain measured from real negatives</h2>
+    <p>The grain is measured from my own 120 negatives — the 35 mm look is the same emulsion at 35 mm’s magnification — and it sits in the picture the way film grain does: bigger in the shadows, finer in the highlights, gone in pure white. It is rendered for the size of each file — a fine tooth on the 1080 px post, real printable grain on the full-size master — never resampled. <a href="/grain-studio/grain/">See it measured, with 100 % crops.</a></p>
+
+    <h2>Halation: the glow around bright lights</h2>
+    <p>Film scatters light back through its base, so street lights, neon and sun on skin carry a soft red-orange bloom. Grain Studio adds it in natural, amber, magenta or violet — or a restrained documentary glow — strongest where the light is, and the edge softness is measured from my 120 and 35 mm scans.</p>
+
+    <h2>HDR in, HDR out</h2>
+    <p>Start from a Lightroom HDR export (AVIF or HEIC), an iPhone photo, a 16-bit scan or a camera RAW. You get back an HDR HEIC with a gain map that keeps its highlights in Apple Photos — the film look without flattening the picture to SDR.</p>
+
+    <h2>Instagram and RedNote versions</h2>
+    <p>Besides the full-resolution master you get an Instagram version (1080 px wide) and a RedNote version (1242 px, 3:4), sized the way each platform keeps them, each with the grain rendered for its own size — so what you post is what you saw.</p>
+
+    <h2>HDR carousels</h2>
+    <p>Several photos become one set of equal slides on one tone map: one per slide, pairs, a 2×2 grid, one wide photo split across two or three slides, or a before &amp; after. Design your own slides too — place photos anywhere, run one across two slides, tilt, frame and caption them. Every slide is an HDR file.</p>
+
+    <h2>On iPhone, iPad and Mac</h2>
+    <p>On the phone, six looks are rendered on your own photo before you choose. On the Mac, a whole shoot goes through in one batch and every option has a “?” with pictures and a plain explanation. Nothing is ever overwritten. No account, no upload, no analytics: your photos never leave your device.</p>
+
+    <h2>Questions</h2>
+    <dl class="gs__faq">
+      <dt>Does it keep my photos HDR?</dt>
+      <dd>Yes. An HDR photo in gives an HDR HEIC out, with a gain map, in Apple Photos and as an Instagram feed photo. An SDR photo stays SDR.</dd>
+      <dt>Which files can I use?</dt>
+      <dd>HEIC, AVIF, JPEG, 16-bit TIFF and camera RAW — straight from Photos on iPhone and iPad, or from Finder on the Mac.</dd>
+      <dt>Is it a camera?</dt>
+      <dd>No. It finishes photos you have already taken, with any camera.</dd>
+      <dt>What does it cost?</dt>
+      <dd>Free for 7 days at full quality, then a one-time unlock — no subscription. One purchase for iPhone, iPad and Mac.</dd>
+    </dl>
+
+    <p class="gs__cta"><a class="gs__store" data-store href={STORE}>Download on the App Store</a></p>
+    <p class="gs__links"><a href="/grain-studio/grain/">The grain, measured</a> · <a href="/grain-studio/support/">Support</a> · <a href="/grain-studio/privacy/">Privacy</a></p>
     <p class="gs__fine">For the frames you did not shoot on film. Grain Studio is not affiliated with any film manufacturer.</p>
   </article>
 </BaseLayout>
@@ -45,11 +108,16 @@ const STORE = 'https://apps.apple.com/app/grain-studio-by-ryuxik/id6810501253';
 <style>
   .gs { padding-block: clamp(2rem, 8vh, 5rem); max-width: 42rem; }
   .gs p { margin-top: var(--space-4); line-height: 1.6; }
+  .gs h2 { margin-top: var(--space-6, 2.5rem); font-family: var(--grotesque); font-weight: 500; font-size: 1.15em; }
   .gs__proof { font-family: var(--grotesque); font-weight: 500; color: var(--accent); }
+  .gs__hero { margin: var(--space-5, 2rem) 0 0; }
+  .gs__hero img { display: block; width: 100%; height: auto; border-radius: 4px; }
+  .gs__hero figcaption { margin-top: 0.5em; font-size: 0.85em; opacity: 0.7; }
   .gs__cta { font-family: var(--grotesque); font-weight: 500; }
   .gs__store { display: inline-block; padding: 0.7em 1.2em; border: 1px solid currentColor; border-radius: 6px; color: inherit; text-decoration: none; }
   .gs__store:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
-  .gs__terms { font-family: var(--grotesque); }
+  .gs__faq dt { margin-top: var(--space-4); font-family: var(--grotesque); font-weight: 500; }
+  .gs__faq dd { margin: 0.3em 0 0; line-height: 1.6; }
   .gs__links a { color: var(--accent); }
   .gs__fine { font-size: 0.85em; opacity: 0.7; }
 </style>

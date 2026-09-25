@@ -20,6 +20,8 @@ import { SITE } from '../config';
 interface Props {
   /** Page name. Rendered as "{title} · {SITE.name}". Omit on the home page for the bare SITE.title. */
   title?: string;
+  /** The whole <title>, used as is (product pages that need their search words in the first 60 characters). */
+  fullTitle?: string;
   /** Meta description. Falls back to SITE.description. */
   description?: string;
   /** Site-absolute path to the 1200×630 OG JPEG. Defaults per page (see OG_BY_PATH). */
@@ -32,9 +34,9 @@ interface Props {
   noindex?: boolean;
 }
 
-const { title, description, ogImage, type = 'website', imageAlt, noindex = false } = Astro.props;
+const { title, fullTitle, description, ogImage, type = 'website', imageAlt, noindex = false } = Astro.props;
 
-const pageTitle = title ? `${title} · ${SITE.business}` : SITE.title;
+const pageTitle = fullTitle ?? (title ? `${title} · ${SITE.business}` : SITE.title);
 const pageDescription = description ?? SITE.description;
 
 // Astro's own path shape, unmodified — matches what @astrojs/sitemap emits.
