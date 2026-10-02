@@ -17,21 +17,23 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: 'Grain Studio',
-  alternateName: 'Grain Studio: Film Grain & HDR',
+  alternateName: 'Grain Studio: Film Looks & HDR',
   applicationCategory: 'MultimediaApplication',
   applicationSubCategory: 'Photo & Video',
   operatingSystem: 'iOS 18, iPadOS 18, macOS 15',
-  description: 'Adds film grain measured from real medium-format negatives, halation and emulsion softness to photos you already have, and keeps them HDR (HDR HEIC with a gain map). Makes 4:5 and 3:4 post sizes and HDR carousels. Batch processing on Mac.',
+  description: 'Seven film looks with grain measured from real medium-format negatives, halation and emulsion softness, for photos you already have and for video clips, kept HDR (HDR HEIC with a gain map, HLG video). Makes 4:5 and 3:4 post sizes and HDR carousels. Batch processing on Mac.',
   url: 'https://ryuxik.io/grain-studio/',
   downloadUrl: 'https://apps.apple.com/app/id6810501253',
   installUrl: 'https://apps.apple.com/app/id6810501253',
   image: 'https://ryuxik.io/grain-studio/og.jpg',
   featureList: [
+    'Seven film looks: Natural, Portrait, Pastel, Slide, Golden, Tungsten and Mono',
     'Film grain measured from real negatives, rendered for each output size',
     'Halation and emulsion softness',
     'HDR in, HDR out: gain-map HEIC from HDR AVIF, HEIC, RAW or TIFF',
     'Instagram (4:5) and RedNote (3:4) versions',
-    'HDR carousels on one tone map, and a slide designer',
+    'HDR carousels on one tone map: split one photo across slides, pairs, grids, before & after',
+    'Film grain on video clips, new grain every frame, HDR in and out, sound kept',
     'Batch processing on Mac',
   ],
   author: { '@type': 'Person', name: 'Santiago Munoz', url: 'https://ryuxik.io/' },
@@ -41,7 +43,7 @@ const jsonLd = {
 ---
 
 <BaseLayout>
-  <Seo slot="head" fullTitle="Grain Studio: Film Grain, Halation & HDR for iPhone and Mac" description="Add film grain measured from real negatives, halation and softness to photos you already have, and keep them HDR. Plus HDR carousels. iPhone, iPad, Mac." ogImage="/grain-studio/og.jpg" imageAlt="A night street photo before and after Grain Studio: film grain, halation and HDR kept" />
+  <Seo slot="head" fullTitle="Grain Studio: Film Grain, Halation & HDR for iPhone and Mac" description="Seven film looks with grain measured from real negatives and halation, for your photos and video clips, kept HDR. Plus seamless HDR carousels. iPhone, iPad, Mac." ogImage="/grain-studio/og.jpg" imageAlt="A night street photo before and after Grain Studio: film grain, halation and HDR kept" />
   <meta slot="head" name="apple-itunes-app" content="app-id=6810501253" />
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <article class="column gs">
@@ -67,18 +69,22 @@ const jsonLd = {
     <h2>Instagram and RedNote versions</h2>
     <p>Besides the full-resolution master you get an Instagram version (1080 px wide) and a RedNote version (1242 px, 3:4), sized the way each platform keeps them, each with the grain rendered for its own size — so what you post is what you saw.</p>
 
-    <h2>HDR carousels</h2>
-    <p>Several photos become one set of equal slides on one tone map: one per slide, pairs, a 2×2 grid, one wide photo split across two or three slides, or a before &amp; after. Design your own slides too — place photos anywhere, run one across two slides, tilt, frame and caption them. Every slide is an HDR file.</p>
+    <h2>Seamless HDR carousels</h2>
+    <p>Compose a carousel in five steps — photos, look, layout, arrange, export. Split one wide photo across two or three slides so it runs across the swipe, pair two photos, make a 2×2 grid or a before &amp; after. Every cell is rendered from the original at its own size, the whole set shares one tone map, and every slide is an HDR file.</p>
+    <figure class="gs__hero"><img src="/grain-studio/carousel-split.jpg" width="1600" height="1002" alt="A city gate and lantern festival at night seen through a window, split across two carousel slides that meet at the seam" loading="lazy" /></figure>
+
+    <h2>Film grain on your video</h2>
+    <p>Clips get the same looks: new grain in every frame the way film moves, a glow around every light, and HDR in and HDR out with the sound kept. Frame them for Reels at 9:16, or 4:5 or 1:1, and develop them in the same batch as your photos.</p>
 
     <h2>On iPhone, iPad and Mac</h2>
-    <p>On the phone, six looks are rendered on your own photo before you choose. On the Mac, a whole shoot goes through in one batch and every option has a “?” with pictures and a plain explanation. Nothing is ever overwritten. No account, no upload, no analytics: your photos never leave your device.</p>
+    <p>On the phone, all seven looks are rendered on your own photo before you choose; swipe through your photos and hold one to see the original. On the Mac, a whole shoot goes through in one batch and every option has a “?” with pictures and a plain explanation. Nothing is ever overwritten. No account, no upload, no analytics: your photos never leave your device.</p>
 
     <h2>Questions</h2>
     <dl class="gs__faq">
       <dt>Does it keep my photos HDR?</dt>
       <dd>Yes. An HDR photo in gives an HDR HEIC out, with a gain map, in Apple Photos and as an Instagram feed photo. An SDR photo stays SDR.</dd>
       <dt>Which files can I use?</dt>
-      <dd>HEIC, AVIF, JPEG, 16-bit TIFF and camera RAW — straight from Photos on iPhone and iPad, or from Finder on the Mac.</dd>
+      <dd>HEIC, AVIF, JPEG, 16-bit TIFF and camera RAW photos, and video clips — straight from Photos on iPhone and iPad, or from Finder on the Mac.</dd>
       <dt>Is it a camera?</dt>
       <dd>No. It finishes photos you have already taken, with any camera.</dd>
       <dt>What does it cost?</dt>
