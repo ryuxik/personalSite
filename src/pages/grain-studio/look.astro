@@ -1,0 +1,119 @@
+---
+/**
+ * Grain Studio — a look card's link, for someone without the app (or not on an iPhone).
+ *
+ * A card's QR code is https://ryuxik.io/grain-studio/look#<payload>. With Grain Studio installed the iPhone opens the
+ * app (a universal link, public/.well-known/apple-app-site-association) and this page never shows. Without it, this
+ * page reads the look's name from the #fragment in the visitor's own browser and points to the App Store.
+ *
+ * The fragment is never sent to this server (browsers do not send it), is never put in a link, a request or the
+ * analytics beacon (track.ts records location.pathname only), and is shown with textContent only. The payload format
+ * is the app's LookCode (docs/LOOKS-API.md §7): version 1, then the name; only the name and a summary are read here.
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Seo from '../../components/Seo.astro';
+
+// the campaign link: installs from look cards count under "look-card" in App Store Connect › Analytics › Campaigns
+const STORE = 'https://apps.apple.com/app/apple-store/id6810501253?pt=128902452&ct=look-card&mt=8';
+---
+
+<BaseLayout>
+  <Seo slot="head" title="A Grain Studio look" description="Someone shared a film look made in Grain Studio. Get the app to add the look to your own photos." ogImage="/grain-studio/og.jpg" imageAlt="A night street photo before and after Grain Studio: film grain, halation and HDR kept" noindex />
+  <article class="column gs look">
+    <p class="eyebrow">Grain Studio · look card</p>
+    <h1 id="look-title">A film look made in Grain Studio</h1>
+    <p class="look__summary" id="look-summary" hidden></p>
+    <p class="look__problem" id="look-problem" hidden></p>
+
+    <p>Someone shared a look from Grain Studio, the app that gives your own photos film grain, the glow film makes around bright lights, and keeps them HDR. A look card carries the look’s settings in its code, never anyone’s photo.</p>
+
+    <h2>Add this look</h2>
+    <ol class="look__steps">
+      <li>Get Grain Studio for iPhone, iPad or Mac.</li>
+      <li>Scan the card again with the iPhone Camera: Grain Studio opens and asks to add the look.</li>
+      <li>Or save the card picture and choose <strong>Add look from a card</strong> (on the Look screen’s ⋯ menu, or Settings › Your looks; on the Mac, File › Add Look from Card…).</li>
+    </ol>
+    <p class="gs__cta"><a class="gs__store" href={STORE}>Download on the App Store</a></p>
+
+    <p class="gs__fine">This page read the look from the part of the link after “#”, here in your browser. That part is never sent to a server.</p>
+    <p class="gs__links"><a href="/grain-studio/">About Grain Studio</a> · <a href="/grain-studio/privacy/">Privacy</a></p>
+  </article>
+</BaseLayout>
+
+<script is:inline>
+  // Read the look's name (and a one-line summary) from location.hash. Strict: base64url only, capped lengths, version 1
+  // only; anything else shows a plain sentence. Never innerHTML, never a request.
+  (function () {
+    var COLOURS = ['', 'Portrait', 'Pastel', 'Slide', 'Golden', 'Tungsten', 'Mono'];
+    var GLOWS = ['natural glow', 'natural glow', 'natural glow', 'red glow', 'magenta glow', 'violet glow', 'amber glow', 'no glow'];
+    var title = document.getElementById('look-title');
+    var summary = document.getElementById('look-summary');
+    var problem = document.getElementById('look-problem');
+    function say(el, text) { el.textContent = text; el.hidden = false; }
+    function bytesOf(s) {
+      if (!s || s.length > 512 || s.length % 4 === 1 || !/^[A-Za-z0-9_-]+$/.test(s)) return null;
+      var b = s.replace(/-/g, '+').replace(/_/g, '/');
+      while (b.length % 4) b += '=';
+      var bin;
+      try { bin = atob(b); } catch (e) { return null; }
+      if (bin.length > 192) return null;
+      var a = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+      return a;
+    }
+    function clean(name) {
+      // control characters, direction overrides and invisible spaces out (by code, so no such character is in this file)
+      var out = '';
+      for (var i = 0; i < name.length; i++) {
+        var c = name.charCodeAt(i);
+        var bad = c < 32 || (c >= 127 && c <= 159) || c === 0x61C || c === 0x200B || c === 0x200E || c === 0x200F ||
+                  (c >= 0x2028 && c <= 0x202E) || (c >= 0x2066 && c <= 0x2069) || c === 0xFEFF;
+        out += bad ? ' ' : name.charAt(i);
+      }
+      return out.replace(/\s+/g, ' ').trim();
+    }
+    function pct(n) { return Math.round(n) + ' %'; }
+    var raw = location.hash.slice(1);
+    if (!raw) return;                                   // no look in the link: the page as it is
+    var a = bytesOf(raw);
+    if (!a || a.length < 2) { say(problem, 'This card’s code could not be read. It may be cut off or changed.'); return; }
+    if (a[0] !== 1) {
+      say(problem, a[0] > 1 ? 'This card was made with a newer Grain Studio. The app reads it once it is up to date.'
+                            : 'This card’s code could not be read. It may be cut off or changed.');
+      return;
+    }
+    var n = a[1];
+    if (n > 40 || a.length < 2 + n + 8) { say(problem, 'This card’s code could not be read. It may be cut off or changed.'); return; }
+    var name;
+    try { name = clean(new TextDecoder('utf-8', { fatal: true }).decode(a.subarray(2, 2 + n))); }
+    catch (e) { say(problem, 'This card’s code could not be read. It may be cut off or changed.'); return; }
+    var p = 2 + n, tex = a[p], glow = GLOWS[(tex >> 1) & 7], mono = (tex & 64) !== 0;
+    var glowAmount = Math.min(a[p + 1], 200), grain = Math.min(a[p + 2], 200), colourAmount = Math.min(a[p + 4], 100), colour = a[p + 6];
+    title.textContent = name ? 'A look called “' + name + '”' : 'A film look made in Grain Studio';
+    document.title = (name ? '“' + name + '” · ' : '') + 'A Grain Studio look';
+    var parts = [(tex & 1) ? '35 mm' : '120 film'];
+    if (colour === 6) parts.push('black and white' + (colourAmount < 100 ? ' ' + pct(colourAmount) : ''));
+    else if (colour >= 1 && colour <= 5) parts.push(COLOURS[colour] + ' colour' + (colourAmount < 100 ? ' ' + pct(colourAmount) : ''));
+    else if (colour === 255) parts.push('its own colour');
+    else if (colour === 0) parts.push('the photo’s own colour');
+    parts.push(glowAmount > 0 ? glow : 'no glow');
+    parts.push(grain > 0 ? (mono ? 'silver grain ' : 'grain ') + pct(grain) : 'no grain');
+    say(summary, parts.join(' · '));
+  })();
+</script>
+
+<style>
+  .gs { padding-block: clamp(2rem, 8vh, 5rem); max-width: 42rem; }
+  .gs p { margin-top: var(--space-4); line-height: 1.6; }
+  .gs h2 { margin-top: var(--space-6, 2.5rem); font-family: var(--grotesque); font-weight: 500; font-size: 1.15em; }
+  .look h1 { overflow-wrap: anywhere; }
+  .look__summary { font-family: var(--mono, monospace); font-size: 0.85em; letter-spacing: 0.04em; color: var(--ink-soft); }
+  .look__problem { color: var(--ink); border-left: 2px solid var(--accent); padding-left: var(--space-4); }
+  .look__steps { margin-top: var(--space-4); padding-left: 1.2em; line-height: 1.6; }
+  .look__steps li + li { margin-top: var(--space-2); }
+  .gs__cta { font-family: var(--grotesque); font-weight: 500; }
+  .gs__store { display: inline-block; padding: 0.7em 1.2em; border: 1px solid currentColor; border-radius: 6px; color: inherit; text-decoration: none; }
+  .gs__store:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .gs__links a { color: var(--accent); }
+  .gs__fine { font-size: 0.85em; opacity: 0.7; }
+</style>

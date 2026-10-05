@@ -26,6 +26,11 @@
 /og/*
   Cache-Control: public, max-age=86400
 
+# Grain Studio universal links (look cards). Apple's CDN fetches this; it must be JSON, no redirect.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600
+
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

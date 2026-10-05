@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["W5U6SZUD4X.io.ryuxik.grainstudio"],
+        "components": [
+          {
+            "/": "/grain-studio/look*",
+            "comment": "Grain Studio look cards. The look rides in the #fragment, which never reaches this server: the app reads it on the device."
+          }
+        ]
+      }
+    ]
+  }
+}
