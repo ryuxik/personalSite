@@ -2,11 +2,17 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["W5U6SZUD4X.io.ryuxik.grainstudio"],
+        "appIDs": [
+          "W5U6SZUD4X.io.ryuxik.grainstudio"
+        ],
         "components": [
           {
-            "/": "/grain-studio/look*",
+            "/": "/grain-studio/look",
             "comment": "Grain Studio look cards. The look rides in the #fragment, which never reaches this server: the app reads it on the device."
+          },
+          {
+            "/": "/grain-studio/look/",
+            "comment": "The same with a trailing slash (the app accepts both). Not /grain-studio/looks or other pages."
           }
         ]
       }
