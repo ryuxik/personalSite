@@ -1,0 +1,46 @@
+---
+/**
+ * Rhymes — privacy policy (required by App Store Connect for TestFlight external testing). Mac only.
+ * The app collects nothing on its own; the one file it can make is written and sent by the user.
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Seo from '../../components/Seo.astro';
+import { SITE } from '../../config';
+---
+
+<BaseLayout>
+  <Seo slot="head" title="Rhymes · Privacy" description="Rhymes runs on your Mac and collects nothing. Your photographs never leave it." ogImage="/og/home.jpg" />
+  <article class="column rh">
+    <p class="eyebrow">Rhymes</p>
+    <h1>Privacy policy</h1>
+    <p class="rh__date">Effective 6 October 2026 · beta 0.1</p>
+
+    <h2>What Rhymes collects</h2>
+    <p>Nothing on its own. Rhymes runs entirely on your Mac. It has no account, no analytics, no crash reporter of its own, and it makes no network connections. It never uploads your photographs or anything made from them.</p>
+
+    <h2>Your photographs</h2>
+    <p>Rhymes reads the folders you choose and, if you choose it, your Apple Photos library; macOS asks your permission first. For each photo it keeps a small preview image and a set of numbers that describe the picture, computed on your Mac, inside the app's own storage. It never changes, moves or deletes your photos. If Photos keeps your originals in iCloud, Photos itself may download a photo so Rhymes can look at it; Rhymes does not connect to iCloud.</p>
+
+    <h2>Diptychs</h2>
+    <p>When you save a pair as a diptych, the image is written to Pictures / Rhymes on your Mac.</p>
+
+    <h2>Sharing with us</h2>
+    <p>The beta has a “Share with the Team” command so testers can help improve Rhymes. It makes a file only when you choose to, saves it where you choose, and sends nothing: you send it yourself, by mail or AirDrop. The file holds the log of your session (what was shown, picked and marked, and how long each took) and, for every photo that appeared in it, its numbers, subject class, orientation, shoot number and the month it was taken, with a random tester id. If you also choose thumbnails, it holds 384-pixel previews of both photos of every pair you marked. It never holds your full photos, file names or folder paths. The numbers are not anonymous: they reveal roughly what a photo shows. We use what you send only to improve how Rhymes finds similarities; we do not sell it or share it with anyone. Write to us and we will delete it.</p>
+
+    <h2>TestFlight</h2>
+    <p>While you test through Apple's TestFlight, Apple may share crash reports, basic usage such as sessions, and any feedback you send through TestFlight with us, under Apple's TestFlight terms.</p>
+
+    <h2>Removing everything</h2>
+    <p>Deleting the app and its folder at ~/Library/Containers/com.loupe.rhymes removes everything Rhymes made. Diptychs you saved stay in Pictures / Rhymes until you delete them.</p>
+
+    <h2>Contact</h2>
+    <p><a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+  </article>
+</BaseLayout>
+
+<style>
+  .rh { padding-block: clamp(2rem, 8vh, 5rem); max-width: 42rem; }
+  .rh h2 { margin-top: var(--space-7); font-size: 1.15rem; }
+  .rh p { margin-top: var(--space-4); line-height: 1.6; }
+  .rh__date { color: var(--line); font-size: 0.9rem; }
+</style>
