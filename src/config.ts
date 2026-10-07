@@ -9,6 +9,8 @@ export const SITE = {
   instagram: "https://www.instagram.com/santi7ago/",
   city: "New York, NY",
   calSession: "ryuxik/cinematic-portrait", // live on cal.com since 2026-09-18, $150 Stripe deposit attached
+  calIntro: "ryuxik/intro-call",         // free 20-minute Google Meet, the "talk before paying" route
+  instagramDm: "https://ig.me/m/santi7ago", // opens the DM thread straight from the in-app browser
   formEndpoint: "",                      // TODO(ryu): e.g. Formspree URL; empty = form hidden, email shown
   // Cloudflare Web Analytics site token. Empty = no beacon is emitted at all.
   // TODO(ryu): paste the token from Cloudflare dashboard → Web Analytics → Add a site.

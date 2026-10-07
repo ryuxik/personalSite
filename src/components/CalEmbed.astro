@@ -100,7 +100,10 @@ const initScript = `
       });
       Cal.ns[NS]("ui", {
         theme: "light",
-        hideEventTypeDetails: false,
+        /* The page above already states price, length and deposit. Cal's own
+           details panel repeats them and, on a phone, pushes the month grid
+           about a screen and a half below "Pick a date". */
+        hideEventTypeDetails: true,
         layout: "month_view",
         cssVarsPerTheme: { light: { "cal-brand": "#7A4A2B" } }
       });

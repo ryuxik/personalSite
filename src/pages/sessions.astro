@@ -30,7 +30,14 @@ import { SITE } from '../config';
    band); review every January, raise 10-20% once more than 60% of inquiries
    book. Gallery and retouch counts mirror how Selects galleries actually run:
    every frame edited and downloadable, three favorites marked for full
-   retouching. No shot list: the planning call and moodboard are the prep. */
+   retouching. No shot list: the planning call and moodboard are the prep.
+
+   Copy order follows Sep 2026 client research (review sets from Flytographer,
+   Airbnb, Snappr, Shoott, plus 约拍/旅拍 coverage): what people weigh before
+   booking is, in order, being directed and feeling at ease, photos that look
+   like the portfolio and like them, an all-in price, photo count and
+   retouching, then turnaround. Nobody mentions delivery format, so the page
+   doesn't either. The FAQ below runs in that same order. */
 const SESSION = {
   name: 'Cinematic Portrait Session',
   price: '$650',
@@ -39,8 +46,9 @@ const SESSION = {
   summary: 'Portraits that look like stills from a film. Real locations, real light, no studio.',
   includes: [
     '2 hours, up to 3 looks, 2 locations',
+    'Directed the whole way, no posing experience needed',
     'Planning call and moodboard before the shoot',
-    '25–40 edited HDR frames in a private online gallery, within a week',
+    '25–40 edited frames in a private online gallery, within a week',
     '3 fully retouched favorites, your pick, within 5 business days',
     'Full-resolution downloads plus Instagram and RedNote sizes',
     'Unlimited personal use, no expiration',
@@ -53,7 +61,7 @@ const SESSION = {
   <Seo
     slot="head"
     title="Sessions"
-    description="Cinematic portrait session in New York: two hours on location, 25–40 edited HDR frames, three fully retouched. $650, booked online."
+    description="Cinematic portrait session in New York: two hours on location, 25–40 edited frames, three fully retouched. $650, booked online."
     ogImage="/og/sessions.jpg"
   />
   <SessionsJsonLd slot="head" />
@@ -62,8 +70,8 @@ const SESSION = {
   <div class="column">
     <h1>Sessions</h1>
     <p class="lede">
-      Film-still portraits of you, anywhere in New York. Two hours, 25–40 finished HDR frames,
-      three fully retouched. {SESSION.price}, booked online.
+      Film-still portraits of you, anywhere in New York. Two hours, directed the whole way,
+      25–40 finished frames, three fully retouched. {SESSION.price} flat, booked online.
     </p>
   </div>
 
@@ -97,12 +105,16 @@ const SESSION = {
       <div class="offer__body">
         <div class="offer__pitch">
           <p>
-            You leave with 25&ndash;40 finished frames, mastered in HDR so they look lit from
-            within on a modern phone. Three of them fully retouched, your pick.
+            Never posed before? You don&rsquo;t need to. I direct every frame: where to stand,
+            what your hands do, where to look.
           </p>
           <p>
             Night streets, a subway window, your kitchen at golden hour. We build the scene
             around you. The city is the set.
+          </p>
+          <p>
+            You leave with 25&ndash;40 finished frames. Three of them fully retouched, your
+            pick.
           </p>
         </div>
 
@@ -132,7 +144,12 @@ const SESSION = {
     <CalEmbed id="book" eyebrow="Booking" heading="Pick a date" calLink={SITE.calSession}>
       <p>
         Pick a slot and it&rsquo;s yours. {SESSION.deposit} deposit at booking, off the total.
-        Balance due on the day. Questions first? <a href="#inquire">Email me</a>.
+        Balance due on the day.
+      </p>
+      <p>
+        Questions first? <a href={SITE.instagramDm} data-ev="ask:ig">DM me on Instagram</a>,
+        <a href={`https://cal.com/${SITE.calIntro}`} data-ev="ask:call">book a free 20-minute
+        call</a>, or <a href="#inquire" data-ev="ask:email">email me</a>.
       </p>
     </CalEmbed>
   </div>
@@ -143,6 +160,29 @@ const SESSION = {
     <h2 id="faq-heading">Before you book</h2>
 
     <div class="faqs">
+      <Faq q="I’m awkward in front of a camera. Is that a problem?">
+        <p>
+          No. You never have to know how to pose. I direct every frame, and after the planning
+          call you arrive knowing the looks, the locations and the plan.
+        </p>
+      </Faq>
+
+      <Faq q={`Is ${SESSION.price} the whole price?`}>
+        <p>
+          Yes. Two hours, locations anywhere in the five boroughs, the planning call, the full
+          gallery and three retouched favorites. {SESSION.deposit} at booking, the rest on the
+          day. No packages, no upsell.
+        </p>
+        <p>Optional: extra retouched frames at $65 each.</p>
+      </Faq>
+
+      <Faq q="How many photos do I get, and how retouched are they?">
+        <p>
+          25&ndash;40 frames, every one edited and downloadable. You pick three favorites for
+          full retouching. The goal is you on your best day, not a different face.
+        </p>
+      </Faq>
+
       <Faq q="How long until I get my photos?">
         <p>
           Gallery within a week. Retouched favorites within five business days of your picks.
@@ -150,14 +190,11 @@ const SESSION = {
         </p>
       </Faq>
 
-      <Faq q="What am I allowed to do with the images?">
+      <Faq q="What should I wear?">
         <p>
-          Print them, post them, put them on your site. Personal use is included. Ads,
-          packaging or paid campaigns need a commercial license, quoted per project.
-        </p>
-        <p>
-          I keep the copyright and portfolio rights. Want the shoot kept private? Say so before
-          we shoot and it goes in writing.
+          Solid colors, simple shapes. Skip busy patterns and the day-before haircut. Bring three
+          outfits on hangers and we pick together. The full prep list comes with your booking
+          confirmation.
         </p>
       </Faq>
 
@@ -165,6 +202,10 @@ const SESSION = {
         <p>
           Anywhere in the five boroughs, included. I keep a shortlist of places that photograph
           like a set, or bring your own. More than an hour outside the city adds a travel fee.
+        </p>
+        <p>
+          Online times run until 6pm. Want night streets? Message me and I&rsquo;ll open an evening
+          start.
         </p>
       </Faq>
 
@@ -177,8 +218,8 @@ const SESSION = {
 
       <Faq q="Can I reschedule or cancel?">
         <p>
-          Reschedule free with 48 hours notice. Cancel a week or more out for a full refund.
-          Inside a week, the {SESSION.deposit} deposit becomes credit toward a new date.
+          Reschedule free with 48 hours notice. Cancel 7 business days or more out for a full
+          refund. After that, the {SESSION.deposit} deposit becomes credit toward a new date.
         </p>
         <p>
           Same-day cancellations and no-shows forfeit the deposit. If I cancel, you get a full
@@ -186,11 +227,14 @@ const SESSION = {
         </p>
       </Faq>
 
-      <Faq q="What should I wear?">
+      <Faq q="What am I allowed to do with the images?">
         <p>
-          Solid colors, simple shapes. Skip busy patterns and the day-before haircut. Bring three
-          outfits on hangers and we pick together. The full prep list comes with your booking
-          confirmation.
+          Print them, post them, put them on your site. Personal use is included. Ads,
+          packaging or paid campaigns need a commercial license, quoted per project.
+        </p>
+        <p>
+          I keep the copyright and portfolio rights. Want the shoot kept private? Say so before
+          we shoot and it goes in writing.
         </p>
       </Faq>
     </div>
